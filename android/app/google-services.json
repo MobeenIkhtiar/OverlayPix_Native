@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "897196028997",
+    "project_id": "overlay-pix-fe740",
+    "storage_bucket": "overlay-pix-fe740.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:897196028997:android:e598e8037fbcbd33261f2c",
+        "android_client_info": {
+          "package_name": "com.overlaypixnew"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "897196028997-fl1n498ce0t7onkvjb9dcps4532dj1dg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.overlaypixnew",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "897196028997-3mlm6p213cfkd9h3udv9j4u9fjgg4p8p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRphvcXOmtMc4es6sPwDvKRBD8Qyt9m6g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "897196028997-3mlm6p213cfkd9h3udv9j4u9fjgg4p8p.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "897196028997-0ggo6igihnao340k9plss1kjm4ckan8k.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "org.reactjs.native.example.overlayPixNew"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

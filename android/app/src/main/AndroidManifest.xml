@@ -11,6 +11,16 @@
       android:theme="@style/AppTheme"
       android:usesCleartextTraffic="${usesCleartextTraffic}"
       android:supportsRtl="true">
+
+      <!-- Facebook SDK Configuration -->
+      <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
+      <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/facebook_client_token"/>
+      
+      <!-- Facebook Content Provider for sharing -->
+      <provider android:authorities="com.facebook.app.FacebookContentProvider1152635456681077"
+        android:name="com.facebook.FacebookContentProvider"
+        android:exported="true" />
+
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
