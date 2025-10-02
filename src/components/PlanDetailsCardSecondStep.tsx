@@ -35,18 +35,21 @@ const PlanDetailsCardSecondStep: React.FC<PlanDetailsCardSecondStepProps> = ({
     isEditMode = false,
     editParam = null,
 }) => {
-    const navigation = useNavigation();
+    const navigation: any = useNavigation();
 
     const { isStep2Valid } = useCreateEvent();
 
     const handleNext = () => {
-        // console.log('is edit mode step 3 =>>>>>>>>>>', isEditMode)
+        navigation.navigate('CreateEventThirdStep', { edit: editParam });
 
         if (onNext) {
             onNext();
         } else {
-            // Navigate to the next step screen
-            // navigation.navigate('CreateEventThirdStep', { edit: editParam });
+            if (editParam) {
+                navigation.navigate(`CreateEventThirdStep`, { editParam })
+            } else {
+                navigation.navigate('CreateEventThirdStep')
+            }
         }
     };
 
