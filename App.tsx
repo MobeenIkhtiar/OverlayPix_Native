@@ -6,6 +6,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { configureGoogleSignIn } from './src/config/googleSignIn'
 import { configureFacebookSDK } from './src/config/facebookSDK'
 import { CreateEventProvider } from './src/contexts/CreateEventContext'
+import { StripeProvider } from '@stripe/stripe-react-native'
+import { STRIPE_PUBLISHABLE_KEY } from '@env'
 
 const App = () => {
   useEffect(() => {
@@ -17,10 +19,12 @@ const App = () => {
   return (
     <>
       <SafeAreaProvider style={styles.container}>
-        <CreateEventProvider>
-          <AppNavigator />
-          <Toast />
-        </CreateEventProvider>
+        <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY || ''}>
+          <CreateEventProvider>
+            <AppNavigator />
+            <Toast />
+          </CreateEventProvider>
+        </StripeProvider>
       </SafeAreaProvider>
     </>
   )

@@ -901,14 +901,14 @@ const CreateEventScreen: React.FC = () => {
                                     styles.primaryButton,
                                     !isStep1Valid && styles.primaryButtonDisabled
                                 ]}
-                                onPress={() => {
-                                    if (isStep1Valid) {
-                                        const editParam = (route.params as any)?.edit;
-                                        navigation.navigate('CreateEventSecondStep' as never, {
-                                            edit: editParam
-                                        } as never);
-                                    }
-                                }}
+                                // onPress={() => {
+                                //     if (isStep1Valid) {
+                                //         const editParam = (route.params as any)?.edit;
+                                //         navigation.navigate('CreateEventSecondStep' as never, {
+                                //             edit: editParam
+                                //         } as never);
+                                //     }
+                                // }}
                                 disabled={!isStep1Valid}
                             >
                                 <Text style={styles.primaryButtonText}>
@@ -1188,7 +1188,7 @@ const styles = StyleSheet.create({
     },
     timePickerTextPlaceholder: {
         color: '#9CA3AF',
-        fontSize: wp(4.5),
+        fontSize: wp(3.5),
     },
     timePickerTextWithIcon: {
         marginLeft: wp(2),
@@ -1219,7 +1219,7 @@ const styles = StyleSheet.create({
         marginRight: wp(2),
     },
     endTimeSwitchText: {
-        fontSize: wp(4),
+        fontSize: wp(3.5),
         color: '#3DA9B7',
         fontWeight: '500',
     },

@@ -10,7 +10,7 @@ import {
     Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Mail, Phone, MapPin, ChevronDown, ChevronLeft, Camera, LogOut } from 'lucide-react-native';
+import { Mail, Phone, MapPin, ChevronDown, ChevronLeft, Camera, LogOut, Trash2 } from 'lucide-react-native';
 import { profileService, type UserProfile } from '../../services/profileService';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
@@ -18,6 +18,7 @@ import { icons } from '../../contants/Icons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 const TIMEZONES = [
     'Pacific Time',
@@ -197,6 +198,38 @@ const ProfileScreen: React.FC = () => {
         navigation.goBack();
     };
 
+    const deleteAccount = async () => {
+        try {
+            const res: any = await profileService.deleteUserProfile();
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('uid');
+            await AsyncStorage.removeItem('profilePicture');
+            await AsyncStorage.removeItem('isAnonymous');
+
+            console.log('delete account res =>>>>>>>>>>>>>>>>>>>>>>>>>', res);
+            Toast.show({
+                type: 'success',
+                text1: 'Account deleted successfully',
+            });
+            navigation.reset({ index: 0, routes: [{ name: 'login' }] });
+        } catch (error: any) {
+            console.error('Failed to delete user profile:', error);
+        }
+    };
+
+    // Account deletion handler (placeholder)
+    const handleDeleteAccount = async () => {
+        Alert.alert(
+            'Delete Account',
+            'Are you sure you want to delete your account? This action cannot be undone.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                // You can implement actual deletion logic here
+                { text: 'Delete', style: 'destructive', onPress: () => deleteAccount() },
+            ]
+        );
+    };
+
     // Show loader while fetching initial profile data
     if (initialLoading) {
         return (
@@ -255,6 +288,14 @@ const ProfileScreen: React.FC = () => {
                         <Text style={styles.profileName}>{displayName}</Text>
                         <Text style={styles.profileEmail}>{userProfile?.email}</Text>
                     </View>
+                    {/* Delete account icon on the right */}
+                    <TouchableOpacity
+                        style={styles.deleteAccountButton}
+                        onPress={handleDeleteAccount}
+                        accessibilityLabel="Delete account"
+                    >
+                        <Trash2 size={22} color="#fff" />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Personal Information Form */}
@@ -468,6 +509,14 @@ const styles = StyleSheet.create({
         opacity: 0.8,
         fontSize: 14,
         textAlign: 'left',
+    },
+    deleteAccountButton: {
+        marginLeft: 16,
+        padding: 8,
+        borderRadius: 999,
+        backgroundColor: 'rgba(239,68,68,0.8)', // red with some transparency
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     formCard: {
         width: '100%',

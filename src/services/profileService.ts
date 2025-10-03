@@ -68,5 +68,25 @@ export const profileService = {
             console.error('Error updating user profile:', error);
             throw error;
         }
+    },
+
+    deleteUserProfile: async (): Promise<{ message: string }> => {
+        try {
+            const uid = await AsyncStorage.getItem('uid');
+            console.log('deleting user profile, uid from localStorage:', uid);
+            if (!uid) {
+                throw new Error('User ID (uid) not found in localStorage');
+            }
+
+            const response = await apiService<{ message: string }>(
+                `${endPoints.deleteUser}`,
+                'POST',
+                { uid }
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Error deleting user profile:', error);
+            throw error;
+        }
     }
 }; 

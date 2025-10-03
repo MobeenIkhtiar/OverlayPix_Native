@@ -337,6 +337,7 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB',
         borderWidth: 1,
         marginRight: wp(2),
+        paddingVertical: hp(1.3),
     },
     searchIconContainer: {
         marginRight: wp(2),

@@ -10,6 +10,7 @@ export const endPoints = {
     updateEvent: '/events',
     upgradeEvent: '/events',
     profile: '/events/users',
+    deleteUser: '/user/delete-user',
     // Plans endpoints
     getPlans: '/plans',
     // Terms and conditions endpoints
@@ -47,7 +48,7 @@ export const endPoints = {
     deletePricingPlan: '/plans',
     updateOverlay: '/admin/overlays',
     deleteOverlay: 'admin/overlays',
-    deleteUser: 'admin/users/users',
+    // deleteUser: 'admin/users/users',
     updateOverlayStatus: 'admin/overlays',
 
 }
