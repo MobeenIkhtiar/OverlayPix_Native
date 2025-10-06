@@ -73,7 +73,10 @@
 		<string>fbauth2</string>
 		<string>fbshareextension</string>
 	</array>
-    <key>NSPhotoLibraryUsageDescription</key>
-    <string>Overlay Pix needs access to your photo library so you can choose photos to edit and apply creative overlays.</string>
+   <key>NSCameraUsageDescription</key>
+   <string>Overlay Pix needs camera access so you can take photos to edit and apply creative overlays.</string>
+   <key>NSPhotoLibraryUsageDescription</key>
+   <string>Overlay Pix needs access to your photo library so you can choose photos to edit and apply creative overlays.</string>
+
 </dict>
 </plist>
