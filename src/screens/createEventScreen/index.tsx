@@ -823,14 +823,14 @@ const CreateEventScreen: React.FC = () => {
                                     </View>
                                 </View>
                                 {/* Upload Overlay Template */}
-                                <TouchableOpacity
+                                {/* <TouchableOpacity
                                     style={styles.photoOverlayUploadButton}
                                     onPress={handleOverlayImagePick}
                                     activeOpacity={0.8}
                                 >
-                                    <View style={styles.photoOverlayUploadIconBox}>
-                                        {/* You can use an icon here */}
-                                        <View style={styles.photoOverlayUploadIconInnerBox}>
+                                    <View style={styles.photoOverlayUploadIconBox}> */}
+                                {/* You can use an icon here */}
+                                {/* <View style={styles.photoOverlayUploadIconInnerBox}>
                                             <Calendar size={wp(7)} color="#333" />
                                         </View>
                                     </View>
@@ -841,7 +841,7 @@ const CreateEventScreen: React.FC = () => {
                                     <Text style={styles.photoOverlayUploadDimensions}>
                                         Portrait: 1080×1920 px{'\n'}Landscape: 1920×1080 px
                                     </Text>
-                                </TouchableOpacity>
+                                </TouchableOpacity> */}
                                 {/* Available Overlays */}
                                 <Text style={styles.photoOverlayAvailableTitle}>Available Overlays</Text>
                                 {/* Button to open OverlaySelector modal */}
@@ -855,31 +855,16 @@ const CreateEventScreen: React.FC = () => {
                                     </Text>
                                 </TouchableOpacity>
                                 {/* OverlaySelector Modal */}
-                                <Modal
-                                    visible={overlaySelectorOpen}
-                                    transparent
-                                    animationType="fade"
-                                    onRequestClose={() => setOverlaySelectorOpen(false)}
-                                >
-                                    <Pressable style={styles.modalOverlay} onPress={() => setOverlaySelectorOpen(false)}>
-                                        <View style={styles.modalContent}>
-                                            <TouchableOpacity
-                                                style={styles.overlaySelectorCloseButton}
-                                                onPress={() => setOverlaySelectorOpen(false)}
-                                            >
-                                                <Text style={styles.overlaySelectorCloseButtonText}>&times;</Text>
-                                            </TouchableOpacity>
-                                            <OverlaySelector
-                                                isOpen={overlaySelectorOpen}
-                                                onClose={() => setOverlaySelectorOpen(false)}
-                                                onSelect={(overlay) => {
-                                                    updateStep1Data({ overlayId: overlay.id, overlay: overlay.src });
-                                                    setOverlaySelectorOpen(false);
-                                                }}
-                                            />
-                                        </View>
-                                    </Pressable>
-                                </Modal>
+
+                                <OverlaySelector
+                                    isOpen={overlaySelectorOpen}
+                                    onClose={() => setOverlaySelectorOpen(false)}
+                                    onSelect={(overlay) => {
+                                        updateStep1Data({ overlayId: overlay.id, overlay: overlay.src });
+                                        setOverlaySelectorOpen(false);
+                                    }}
+                                />
+
                                 {/* Overlay Guidelines Modal */}
                                 <OverlayGuidelinesModal open={showOverlayGuidelines} onClose={() => setShowOverlayGuidelines(false)} />
                             </View>
