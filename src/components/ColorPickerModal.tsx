@@ -11,6 +11,8 @@ import {
 import ColorPicker, { Panel1, HueSlider, returnedResults } from 'reanimated-color-picker';
 import { useCreateEvent } from '../hooks/useCreateEvent';
 import { wp, hp } from '../contants/StyleGuide';
+import { runOnJS } from 'react-native-reanimated';
+import { X } from 'lucide-react-native'
 
 interface ColorPickerModalProps {
     open: boolean;
@@ -62,12 +64,18 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({ open, color, onChan
         updateStep3Data({ brandColor: pickedHex });
     };
 
-    // Handler for picking a color from the color picker (does NOT close modal)
-    const handleColorPickerChange = (result: returnedResults) => {
-        const hexColor = result.hex;
+    // JS thread function to update state
+    const updateColor = (hexColor: string) => {
         setHex(hexColor);
         updateStep3Data({ brandColor: hexColor });
         onChange(hexColor);
+    };
+
+    // Handler for picking a color from the color picker (does NOT close modal)
+    const handleColorPickerChange = (result: returnedResults) => {
+        'worklet';
+        const hexColor = result.hex;
+        runOnJS(updateColor)(hexColor);
     };
 
     const handleTextChange = (text: string) => {
@@ -96,15 +104,15 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({ open, color, onChan
                 <View style={styles.modalContent}>
                     <ScrollView showsVerticalScrollIndicator={false}>
                         {/* Close Button */}
-                        <TouchableOpacity
-                            style={styles.closeButton}
-                            onPress={onClose}
-                        >
-                            <Text style={styles.closeButtonText}>×</Text>
-                        </TouchableOpacity>
-
-                        <Text style={styles.title}>Color Picker</Text>
-
+                        <View style={styles.headingBox}>
+                            <Text style={styles.title}>Color Picker</Text>
+                            <TouchableOpacity
+                                style={styles.closeButton}
+                                onPress={onClose}
+                            >
+                                <X size={wp(6)} color="#3DA9B7" />
+                            </TouchableOpacity>
+                        </View>
                         {/* Color Area */}
                         <View style={styles.colorPickerContainer}>
                             <ColorPicker
@@ -188,11 +196,11 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 5,
     },
+    headingBox: {
+        flexDirection: 'row',
+        justifyContent: 'space-between'
+    },
     closeButton: {
-        position: 'absolute',
-        top: wp(3),
-        right: wp(3),
-        zIndex: 20,
         width: wp(8),
         height: wp(8),
         justifyContent: 'center',
@@ -293,4 +301,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default ColorPickerModal; 
+export default ColorPickerModal;

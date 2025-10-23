@@ -1,4 +1,4 @@
-package com.overlaypixnew
+package com.overlaypixel
 
 import android.app.Application
 import com.facebook.react.PackageList

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, TextInputProps, KeyboardTypeOptions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardTypeOptions } from 'react-native';
 import { hp, wp } from '../contants/StyleGuide';
 import { Eye, EyeOff } from 'lucide-react-native';
 

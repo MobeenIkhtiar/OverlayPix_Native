@@ -77,14 +77,14 @@ const DashboardScreen: React.FC = () => {
         navigation.navigate('createEvent');
     };
 
-    // const handleEditEvent = async (eventId: string) => {
-    //     try {
-    //         await loadEventForEdit(eventId);
-    //         navigation.navigate(`createEvent?edit=${eventId}`);
-    //     } catch (error) {
-    //         console.error('Failed to load event for editing:', error);
-    //     }
-    // };
+    const handleEditEvent = async (eventId: string) => {
+        try {
+            await loadEventForEdit(eventId);
+            navigation.navigate(`createEvent`, { eventId });
+        } catch (error) {
+            console.error('Failed to load event for editing:', error);
+        }
+    };
 
     // Memoized filtered events for live search
     const filteredYourEvents = useMemo(() => {
@@ -243,8 +243,8 @@ const DashboardScreen: React.FC = () => {
                                         photos={event.photosCount}
                                         guests={event.guestsCount}
                                         onViewImages={() => { navigation.navigate(`eventGallery`, { eventId: event.eventId }) }}
-                                        onEdit={() => { }
-                                            //  handleEditEvent(event.eventId)
+                                        onEdit={() =>
+                                            handleEditEvent(event.eventId)
                                         }
                                         onUpgrade={() => { navigation.navigate(`upgradeEvent`, { eventId: event.eventId }) }}
                                         onQRCode={() => { navigation.navigate(`inviteGuestEasily`, { eventId: event.eventId }) }}

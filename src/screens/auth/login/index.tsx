@@ -35,17 +35,6 @@ const Login: React.FC = () => {
         return () => { isMounted.current = false; };
     }, []);
 
-    // Check screen width to determine if mobile or web (excluding tablets)
-    // useEffect(() => {
-    //     const checkScreenSize = () => {
-    //         setIsMobileScreen(window.innerWidth <= 480);
-    //     };
-
-    //     checkScreenSize();
-    //     window.addEventListener('resize', checkScreenSize);
-    //     return () => window.removeEventListener('resize', checkScreenSize);
-    // }, []);
-
     // Helper to fetch user role from Firestore
     const fetchUserRole = async (uid: string): Promise<string | null> => {
         try {
@@ -183,7 +172,9 @@ const Login: React.FC = () => {
                 safeNavigate('/joinedEvent');
                 return;
             } else {
-                safeNavigate('/dashboard');
+                // safeNavigate('/dashboard');
+
+                navigation.navigate('joinedEvent');
                 return;
             }
         } catch {
@@ -542,7 +533,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#3DA9B7',
         marginTop: hp(0.5),
-        marginBottom: 0,
+        marginBottom: hp(2),
     },
     formContainer: {
         backgroundColor: 'white',

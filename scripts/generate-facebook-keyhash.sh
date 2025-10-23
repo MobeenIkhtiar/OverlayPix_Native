@@ -19,7 +19,9 @@ fi
 
 # Generate key hash for debug keystore
 echo "Generating key hash for debug keystore..."
-DEBUG_KEYHASH=$(keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android | openssl sha1 -binary | openssl base64)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
+DEBUG_KEYHASH=$(keytool -exportcert -alias androiddebugkey -keystore "$PROJECT_DIR/android/app/debug.keystore" -storepass android -keypass android | openssl sha1 -binary | openssl base64)
 
 echo "Debug Key Hash: $DEBUG_KEYHASH"
 echo ""

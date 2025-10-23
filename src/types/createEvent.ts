@@ -78,7 +78,7 @@ export interface CreateEventStep1Data {
     timeZone: string;
     startTime: string;
     endTime: string;
-    overlay: string | File;
+    overlay: any;
     overlayName: string;
     overlayId: string;
 }
@@ -93,7 +93,7 @@ export interface CreateEventStep3Data {
     fontWeight: string;
     fontSize: string;
     eventPicture: string | null;
-    eventPictureFile?: File;
+    eventPictureFile?: any;
     overlayTemplate?: File;
 }
 

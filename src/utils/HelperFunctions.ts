@@ -1,5 +1,6 @@
 import { Linking, Alert } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { BASEURL } from '../services/Endpoints';
 
 const handleSupportEmail = async () => {
     const email = 'support@overlaypix.com';
@@ -41,6 +42,14 @@ export const showErrorToastWithSupport = (message: string) => {
             }
         }
     });
+};
+
+export const proxyOverlayImage = (imageUrl: any): string => {
+    // Only proxy R2 URLs
+    if (imageUrl?.includes('pub-1fe18182db0a4663b094a09a53fae1e8.r2.dev')) {
+        return `${BASEURL}/images/proxy?url=${encodeURIComponent(imageUrl)}`;
+    }
+    return imageUrl;
 };
 
 // Helper to format price to 2 decimals

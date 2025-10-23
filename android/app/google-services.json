@@ -7,17 +7,17 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:897196028997:android:e598e8037fbcbd33261f2c",
+        "mobilesdk_app_id": "1:897196028997:android:fb2aa3d7f3b3d74f261f2c",
         "android_client_info": {
-          "package_name": "com.overlaypixnew"
+          "package_name": "com.overlaypixel"
         }
       },
       "oauth_client": [
         {
-          "client_id": "897196028997-fl1n498ce0t7onkvjb9dcps4532dj1dg.apps.googleusercontent.com",
+          "client_id": "897196028997-ehier5feak9lkaoi3mku2m9tep31ueq5.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.overlaypixnew",
+            "package_name": "com.overlaypixel",
             "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
           }
         },
@@ -42,7 +42,7 @@
               "client_id": "897196028997-0ggo6igihnao340k9plss1kjm4ckan8k.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "org.reactjs.native.example.overlayPixNew"
+                "bundle_id": "org.reactjs.native.example.overlayPix"
               }
             }
           ]

@@ -76,3 +76,10 @@ yarn-error.log
 
 # Environment variables
 .env
+
+# Release keystore and credentials (SECURITY - DO NOT COMMIT)
+android/app/release.keystore
+android/app/release-credentials.txt
+*.aab
+*.apk
+android/app/release/

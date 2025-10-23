@@ -314,10 +314,16 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
             }
 
             // Debug: log all FormData entries
-            // console.log('FormData being sent:');
-            // for (const [key, value] of formData.entries()) {
-            //     console.log(key, value);
-            // }
+            // Log FormData keys and values in a way compatible with React Native's FormData (which may not support entries())
+            console.log('FormData being sent:=>>>>>>>>>>>>>>>>>');
+            // NOTE: This will only work in environments with FormData.getParts or if a polyfill is used
+            if (typeof (formData as any)._parts !== 'undefined') {
+                (formData as any)._parts.forEach((part: any) => {
+                    console.log(part[0], part[1]);
+                });
+            } else {
+                console.log('formData structure not inspectable in this environment');
+            }
 
             const config = { headers: { 'Content-Type': 'multipart/form-data' } };
             // Step 5: Make API call

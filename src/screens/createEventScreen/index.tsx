@@ -99,7 +99,11 @@ const CreateEventScreen: React.FC = () => {
     const [twentyFourHourEndDate, setTwentyFourHourEndDate] = useState<Date | null>(null);
 
     const navigation = useNavigation<any>();
-    const route = useRoute();
+
+    const route = useRoute<any>();
+
+    const eventId = route?.params?.eventId;
+
     const { step1Data, updateStep1Data, isStep1Valid, resetEventData } = useCreateEvent();
 
     const [eventDate, setEventDate] = useState<Date | null>(
@@ -117,15 +121,14 @@ const CreateEventScreen: React.FC = () => {
 
     // Check if we're in edit mode by checking route params and step1Data
     useEffect(() => {
-        const editParam = (route.params as any)?.edit;
-        console.log('editParam', editParam);
-        if (editParam) {
+        console.log('editParam', eventId);
+        if (eventId) {
             setIsEditMode(true);
         } else {
             setIsEditMode(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [(route.params as any), step1Data.name]);
+    }, [eventId, step1Data.name]);
 
     useEffect(() => {
         if (
@@ -356,15 +359,23 @@ const CreateEventScreen: React.FC = () => {
 
             // Update the overlay data
             if (selectedAsset.uri && selectedAsset.type) {
-                // Create a File object from the selected asset
-                const response = await fetch(selectedAsset.uri);
-                const blob = await response.blob();
-                const file = new File(
-                    [blob],
-                    selectedAsset.fileName ?? 'overlay.png',
-                    { type: selectedAsset.type }
-                );
-                updateStep1Data({ overlay: file });
+                // // Create a File object from the selected asset
+                // const response = await fetch(selectedAsset.uri);
+                // const blob = await response.blob();
+                // const file = new File(
+                //     [blob],
+                //     selectedAsset.fileName ?? 'overlay.png',
+                //     { type: selectedAsset.type }
+                // );
+                // // Store the file with uri property for preview
+                // const fileWithUri = Object.assign(file, { uri: selectedAsset.uri });
+                updateStep1Data({
+                    overlay: {
+                        uri: selectedAsset.uri,
+                        type: selectedAsset.type,
+                        name: selectedAsset.fileName,
+                    }
+                });
             }
         } catch (error) {
             Alert.alert('Error', 'Failed to pick image');
@@ -823,14 +834,14 @@ const CreateEventScreen: React.FC = () => {
                                     </View>
                                 </View>
                                 {/* Upload Overlay Template */}
-                                {/* <TouchableOpacity
+                                <TouchableOpacity
                                     style={styles.photoOverlayUploadButton}
                                     onPress={handleOverlayImagePick}
                                     activeOpacity={0.8}
                                 >
-                                    <View style={styles.photoOverlayUploadIconBox}> */}
-                                {/* You can use an icon here */}
-                                {/* <View style={styles.photoOverlayUploadIconInnerBox}>
+                                    <View style={styles.photoOverlayUploadIconBox}>
+                                        {/* You can use an icon here */}
+                                        <View style={styles.photoOverlayUploadIconInnerBox}>
                                             <Calendar size={wp(7)} color="#333" />
                                         </View>
                                     </View>
@@ -841,7 +852,7 @@ const CreateEventScreen: React.FC = () => {
                                     <Text style={styles.photoOverlayUploadDimensions}>
                                         Portrait: 1080×1920 px{'\n'}Landscape: 1920×1080 px
                                     </Text>
-                                </TouchableOpacity> */}
+                                </TouchableOpacity>
                                 {/* Available Overlays */}
                                 <Text style={styles.photoOverlayAvailableTitle}>Available Overlays</Text>
                                 {/* Button to open OverlaySelector modal */}
@@ -888,9 +899,9 @@ const CreateEventScreen: React.FC = () => {
                                 ]}
                                 // onPress={() => {
                                 //     if (isStep1Valid) {
-                                //         const editParam = (route.params as any)?.edit;
+                                //         const editParam = eventId;
                                 //         navigation.navigate('CreateEventSecondStep' as never, {
-                                //             edit: editParam
+                                //             eventId: editParam
                                 //         } as never);
                                 //     }
                                 // }}
@@ -955,13 +966,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     eventDetailsTitle: {
-        fontSize: wp(6),
+        fontSize: wp(4.5),
         fontWeight: 'bold',
-        color: '#0D9488',
+        color: '#3DA9B7',
         textAlign: 'left',
+        marginBottom: hp(.5)
     },
     eventDetailsSubtitle: {
-        fontSize: wp(4),
+        fontSize: wp(3),
         color: 'rgba(0, 0, 0, 0.5)',
         textAlign: 'left',
     },
@@ -1051,7 +1063,7 @@ const styles = StyleSheet.create({
     },
     primaryButtonText: {
         color: 'white',
-        fontSize: wp(4.5),
+        fontSize: wp(4),
         fontWeight: '500',
     },
     secondaryButton: {
@@ -1064,7 +1076,7 @@ const styles = StyleSheet.create({
     },
     secondaryButtonText: {
         color: '#6B7280',
-        fontSize: wp(4.5),
+        fontSize: wp(4),
         fontWeight: '500',
     },
     checkboxRow: {
@@ -1266,7 +1278,7 @@ const styles = StyleSheet.create({
         textAlign: 'left',
     },
     photoOverlayHeaderSubtitle: {
-        fontSize: wp(3.5),
+        fontSize: wp(3),
         color: 'rgba(0,0,0,0.6)',
         marginTop: hp(0.5),
     },
