@@ -304,7 +304,6 @@ export const loginWithGoogle = async (isGuest: boolean) => {
         if (!idToken) {
             throw new Error('No ID token found');
         }
-
         // Create a Google credential with the token
         const googleCredential = GoogleAuthProvider.credential(idToken);
 
