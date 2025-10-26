@@ -504,7 +504,6 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 throw new Error('Please fill in all required fields (name, type, date)');
             }
 
-
             const photosPerGuest = step2Data.plan.photosPerGuest > 0 ? step2Data.plan.photosPerGuest : null;
 
             const eventData = new FormData();
