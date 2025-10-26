@@ -19,15 +19,14 @@ export interface UserProfile {
 export const profileService = {
     /**
      * Get user profile data from the API
-     * Gets the uid from localStorage and passes it as a query param
+     * Gets the uid from AsyncStorage and passes it as a query param
      */
     getUserProfile: async (): Promise<UserProfile> => {
         try {
-
             const uid = await AsyncStorage.getItem('uid');
-            console.log('Fetching user profile, uid from localStorage:', uid);
+            console.log('Fetching user profile, uid from AsyncStorage:', uid);
             if (!uid) {
-                throw new Error('User ID (uid) not found in localStorage');
+                throw new Error('User ID (uid) not found in AsyncStorage');
             }
             const response = await apiService<UserProfile>(
                 `${endPoints.profile}/${encodeURIComponent(uid)}`,
@@ -43,13 +42,13 @@ export const profileService = {
 
     /**
      * Update user profile data
-     * Gets the uid from localStorage and passes it in the request body
+     * Gets the uid from AsyncStorage and passes it in the request body and endpoint
      */
     updateUserProfile: async (profileData: Partial<UserProfile>): Promise<UserProfile> => {
         try {
-            const uid = localStorage.getItem('uid');
+            const uid = await AsyncStorage.getItem('uid');
             if (!uid) {
-                throw new Error('User ID (uid) not found in localStorage');
+                throw new Error('User ID (uid) not found in AsyncStorage');
             }
 
             const config = {
@@ -70,12 +69,16 @@ export const profileService = {
         }
     },
 
+    /**
+     * Delete user profile
+     * Gets the uid from AsyncStorage and passes it in the request body
+     */
     deleteUserProfile: async (): Promise<{ message: string }> => {
         try {
             const uid = await AsyncStorage.getItem('uid');
-            console.log('deleting user profile, uid from localStorage:', uid);
+            console.log('Deleting user profile, uid from AsyncStorage:', uid);
             if (!uid) {
-                throw new Error('User ID (uid) not found in localStorage');
+                throw new Error('User ID (uid) not found in AsyncStorage');
             }
 
             const response = await apiService<{ message: string }>(
@@ -89,4 +92,4 @@ export const profileService = {
             throw error;
         }
     }
-}; 
+};

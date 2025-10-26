@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>overlayPixNew</string>
+	<string>Overlay Pix</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -65,11 +65,11 @@
 	<key>FacebookClientToken</key>
 	<string>93d22da508519214744f2d2ac0e1ffaa</string>
 	<key>FacebookDisplayName</key>
-	<string>overlayPixNew</string>
+    <string>OverlayPix</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>fbapi</string>
-		<string>fb-messenger-share-api</string>
+        <string>fb-messenger-share-api</string>
 		<string>fbauth2</string>
 		<string>fbshareextension</string>
 	</array>

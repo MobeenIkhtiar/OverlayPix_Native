@@ -897,14 +897,14 @@ const CreateEventScreen: React.FC = () => {
                                     styles.primaryButton,
                                     !isStep1Valid && styles.primaryButtonDisabled
                                 ]}
-                                // onPress={() => {
-                                //     if (isStep1Valid) {
-                                //         const editParam = eventId;
-                                //         navigation.navigate('CreateEventSecondStep' as never, {
-                                //             eventId: editParam
-                                //         } as never);
-                                //     }
-                                // }}
+                                onPress={() => {
+                                    if (isStep1Valid) {
+                                        const editParam = eventId;
+                                        navigation.navigate('CreateEventSecondStep' as never, {
+                                            eventId: editParam
+                                        } as never);
+                                    }
+                                }}
                                 disabled={!isStep1Valid}
                             >
                                 <Text style={styles.primaryButtonText}>

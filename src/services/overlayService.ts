@@ -1,4 +1,4 @@
-import { adminApiService, apiService } from './api';
+import { apiService } from './api';
 import { endPoints } from './Endpoints';
 
 export interface OverlayData {
