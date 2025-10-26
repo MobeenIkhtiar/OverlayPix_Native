@@ -203,7 +203,7 @@ const CreateEventFourthStep: React.FC = () => {
                 setPaymentMessage("Initiating Cash App payment...");
                 setPaymentMessageType('');
 
-                const eventDataToStore = {
+                const eventDataToStore: any = {
                     step1Data,
                     step2Data,
                     step3Data,
@@ -260,6 +260,7 @@ const CreateEventFourthStep: React.FC = () => {
 
             switch (paymentStatus) {
                 case 'Succeeded':
+                case 'succeeded':
                     setPaymentMessage("✅ Payment successful!");
                     setPaymentMessageType('success');
                     updateStep4Data({
@@ -269,7 +270,10 @@ const CreateEventFourthStep: React.FC = () => {
                         }
                     });
                     // Proceed with event creation/upgrade
-                    setISPaymentIntent(true);
+                    // Only trigger useEffect for create mode, not upgrade
+                    if (!isUpgradeMode) {
+                        setISPaymentIntent(true);
+                    }
                     break;
 
                 case 'requires_action':
@@ -320,17 +324,18 @@ const CreateEventFourthStep: React.FC = () => {
                     return;
             }
 
-            // For upgrade mode, handle immediately
-            if (isUpgradeMode && eventId && paymentStatus === 'succeeded') {
+            // For upgrade mode, handle immediately and return
+            if (isUpgradeMode && eventId && (paymentStatus === 'succeeded' || paymentStatus === 'Succeeded')) {
                 const upgradeRes = await upgradeEvent(eventId);
                 if (upgradeRes?.success) {
-                    navigation.navigate('EventCreatedScreen', { eventId });
+                    navigation.navigate('eventCreatedScreen', { eventId });
                 } else {
                     setPaymentMessage('Error occurred during event upgrade.');
                     setPaymentMessageType('error');
                     showErrorToastWithSupport('Error occurred during event upgrade.');
                 }
                 setLoading(false);
+                return; // CRITICAL: Exit here to prevent any further execution
             }
 
         } catch (paymentError: unknown) {
@@ -362,6 +367,12 @@ const CreateEventFourthStep: React.FC = () => {
     useEffect(() => {
         const createEventLocal = async () => {
             try {
+                // Safety check: Don't create event if in upgrade mode
+                if (isUpgradeMode) {
+                    console.log('Skipping createEvent - in upgrade mode');
+                    return;
+                }
+
                 console.log('Creating event with data:', { step2Data, step4Data });
 
                 const result = await (createEvent() as Promise<CreateEventResult>);

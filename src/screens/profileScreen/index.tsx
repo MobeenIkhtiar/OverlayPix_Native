@@ -19,6 +19,8 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { LoginManager } from 'react-native-fbsdk-next';
 
 const TIMEZONES = [
     'Pacific Time',
@@ -179,18 +181,37 @@ const ProfileScreen: React.FC = () => {
         }
     };
 
-    // Logout handler
+    // Professional logout handler
     const handleLogout = async () => {
         try {
-            await AsyncStorage.removeItem('token');
-            await AsyncStorage.removeItem('uid');
-            await AsyncStorage.removeItem('profilePicture');
-            await AsyncStorage.removeItem('isAnonymous');
-        } catch (e) {
-            // handle error if needed
+            // Clear user session data
+            await Promise.all([
+                AsyncStorage.removeItem('token'),
+                AsyncStorage.removeItem('uid'),
+                AsyncStorage.removeItem('profilePicture'),
+                AsyncStorage.removeItem('isAnonymous')
+            ]);
+            // Safely disconnect from external auth providers
+            try {
+                await GoogleSignin.signOut();
+                await GoogleSignin.revokeAccess();
+            } catch (googleError) {
+                console.warn('Google sign out error:', googleError);
+            }
+            // Facebook LoginManager.logOut() does not return a promise, so remove 'await'
+            try {
+                LoginManager.logOut();
+            } catch (facebookError) {
+                console.warn('Facebook logout error:', facebookError);
+            }
+
+            // Notify user and navigate to login
+            Alert.alert('Logout', 'You have been logged out successfully.');
+            navigation.reset({ index: 0, routes: [{ name: 'login' }] });
+        } catch (error) {
+            console.error('Logout failed:', error);
+            Alert.alert('Logout Error', 'An error occurred during logout. Please try again.');
         }
-        Alert.alert('Logout', 'You have been logged out.');
-        navigation.reset({ index: 0, routes: [{ name: 'login' }] });
     };
 
     // Back button handler
