@@ -410,6 +410,7 @@ const CreateEventScreen: React.FC = () => {
                     <TextInput
                         style={[styles.input, styles.eventTypeCustomInput]}
                         placeholder="Please specify event type"
+                        placeholderTextColor={'#9e9e9e'}
                         value={customEventType}
                         onChangeText={handleCustomEventTypeChange}
                     />
@@ -523,6 +524,7 @@ const CreateEventScreen: React.FC = () => {
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Enter Event Name"
+                                        placeholderTextColor={'#9e9e9e'}
                                         value={step1Data.name}
                                         onChangeText={(text) => updateStep1Data({ name: text })}
                                     />
@@ -579,6 +581,7 @@ const CreateEventScreen: React.FC = () => {
                                         <DateTimePicker
                                             value={eventDate || new Date()}
                                             mode="date"
+                                            textColor='black'
                                             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                                             onChange={(event, date) => {
                                                 if (Platform.OS === 'android') {
@@ -1052,7 +1055,7 @@ const styles = StyleSheet.create({
         marginTop: hp(4),
     },
     primaryButton: {
-        backgroundColor: '#0D9488',
+        backgroundColor: '#3DA9B7',
         borderRadius: wp(3),
         paddingHorizontal: wp(10),
         paddingVertical: hp(2),

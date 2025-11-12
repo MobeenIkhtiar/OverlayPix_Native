@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Platform } from 'react-native';
 import Header from '../../components/Header';
 import { useNavigation } from '@react-navigation/native';
 import { endPoints } from '../../services/Endpoints';
@@ -242,7 +242,9 @@ const DashboardScreen: React.FC = () => {
                                         }
                                         photos={event.photosCount}
                                         guests={event.guestsCount}
-                                        onViewImages={() => { navigation.navigate(`eventGallery`, { eventId: event.eventId }) }}
+                                        onViewImages={() => { 
+                                            navigation.navigate(`eventGallery`, { eventId: event.eventId }) 
+                                        }}
                                         onEdit={() =>
                                             handleEditEvent(event.eventId)
                                         }
@@ -287,7 +289,9 @@ const DashboardScreen: React.FC = () => {
                                         photos={event.photosUploaded}
                                         guests={event.guestName}
                                         // Only allow view images for joined events
-                                        onViewImages={() => { navigation.navigate(`userGallery`, { eventId: event?.eventId, fromDashboard: true }) }}
+                                        onViewImages={() => {
+                                            //  navigation.navigate(`userGallery`, { eventId: event?.eventId, fromDashboard: true }) 
+                                            }}
                                     // // Hide edit/upgrade/qr for joined events
                                     // onEdit={undefined}
                                     // onUpgrade={undefined}
@@ -337,7 +341,7 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB',
         borderWidth: 1,
         marginRight: wp(2),
-        paddingVertical: hp(1.3),
+        paddingVertical:Platform.OS === 'ios' ? hp(1.3) : hp(0),
     },
     searchIconContainer: {
         marginRight: wp(2),
@@ -348,7 +352,7 @@ const styles = StyleSheet.create({
         width: wp(5),
         height: wp(5),
         backgroundColor: 'transparent',
-        // You can use a react-native-svg icon here if needed
+        // You can use a react-native-sg icon here if needed
     },
     searchInput: {
         flex: 1,

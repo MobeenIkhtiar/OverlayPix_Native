@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native'
+import { StatusBar, StyleSheet } from 'react-native'
 import React, { useEffect } from 'react'
 import AppNavigator from './src/navigation/AppNavigator'
 import Toast from 'react-native-toast-message'
@@ -16,10 +16,20 @@ const App = () => {
     configureFacebookSDK();
   }, []);
 
-  return (
+ return (
     <>
+      {/* 👇 Add StatusBar here */}
+      <StatusBar
+        backgroundColor="#fff" 
+        barStyle="dark-content" 
+      />
+
       <SafeAreaProvider style={styles.container}>
-        <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY || ''}>
+        <StripeProvider
+          publishableKey={STRIPE_PUBLISHABLE_KEY || ''}
+          merchantIdentifier="merchant.com.overlaypix"
+          urlScheme="overlaypix"
+        >
           <CreateEventProvider>
             <AppNavigator />
             <Toast />
@@ -27,7 +37,7 @@ const App = () => {
         </StripeProvider>
       </SafeAreaProvider>
     </>
-  )
+  );
 }
 
 export default App

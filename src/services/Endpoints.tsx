@@ -1,5 +1,6 @@
 export const BASEURL = 'https://overlay-pix-back.onrender.com/api';
-// export const BASEURL = 'https://tlcwd7f2-5000.inc1.devtunnels.ms/api';
+// export const BASEURL = 'http://192.168.100.215:5001/api';
+// export const BASEURL = 'http://localhost:5001/api';
 
 export const endPoints = {
     // login: '',
@@ -28,6 +29,12 @@ export const endPoints = {
     confirmPayment: '/payments/confirm',
     confirmCashAppIntent: '/payments/confirm-cashapp-intent',
     validateDiscountCode: '/admin/discountcodes/validate',
+
+    // PayPal endpoints
+    createPayalIntent: '/payments/create-paypal-order',
+    confirmPayalIntent: '/payments/capture-paypal-order',
+    paypalStatus: '/payments/paypal-status',
+    paypalUpgradeOrder: '/payments/paypal-upgrade-order',
 
     //admin
     createPricingPlan: '/plans/create',

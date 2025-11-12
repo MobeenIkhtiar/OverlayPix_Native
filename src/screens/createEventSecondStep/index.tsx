@@ -18,7 +18,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const CreateEventSecondStep: React.FC = () => {
     const route = useRoute();
-    // const navigation = useNavigation();
     const [plansOpen, setPlansOpen] = useState<boolean>(true);
     const [guestPhotosOpen, setGuestPhotosOpen] = useState<boolean>(false);
     const [isEditMode, setIsEditMode] = useState<boolean>(false);
@@ -33,8 +32,6 @@ const CreateEventSecondStep: React.FC = () => {
     // Get edit parameter from route params
     const editParam = (route.params as any)?.eventId;
 
-    // console.log('second step event id =>>>>>>>>', editParam);
-
     // New: Error state for photosPerGuest > photoPool
     const [photosPerGuestError, setPhotosPerGuestError] = useState<string | null>(null);
 
@@ -43,9 +40,6 @@ const CreateEventSecondStep: React.FC = () => {
         if (!guestLimit) return 0;
         return Math.round(photoPool / guestLimit);
     };
-
-    // Note: ScrollView in React Native handles scroll position automatically
-    // No need for manual scroll to top
 
     // Fetch plans from API
     useEffect(() => {
@@ -114,51 +108,47 @@ const CreateEventSecondStep: React.FC = () => {
         }
     }, [editParam]);
 
-    // Update context when local state changes
-    const updatePlanData = (updates: Partial<typeof step2Data.plan>) => {
-        updateStep2Data({
-            plan: {
-                ...step2Data.plan,
-                ...updates
-            }
-        });
-    };
+    // FIXED: Calculate prices with proper precision
+    const calculatePrices = React.useCallback(() => {
+        if (!selectedPlan) return;
 
-    // Handle plan selection
-    const handlePlanSelect = (plan: Plan) => {
-        setSelectedPlan(plan);
-        updatePlanData({
-            planId: plan.id,
-            basePlan: plan.price,
-            guestLimit: plan.guestLimit,
-            photoPool: plan.photoPool,
-            finalPrice: plan.price,
-            photosPerGuest: getRoundedPhotosPerGuest(plan.photoPool, plan.guestLimit),
-            storageDays: plan.defaultStorageDays,
-            permissions: {
-                canViewGallery: true,
-                canSharePhotos: false,
-                canDownload: false
-            }
-        });
-    };
+        const guestLimitPrice = calculateGuestLimitPrice();
+        const photoPoolPrice = calculatePhotoPoolPrice();
+        const storageDurationPrice = calculateStorageDurationPrice();
 
-    // Calculate guest limit price (only for extra guests above base)
+        // Always include base plan price with proper decimal handling
+        const totalPrice = (selectedPlan.price || 0) + guestLimitPrice + photoPoolPrice + storageDurationPrice;
+
+        return {
+            guestLimitPrice: Number(guestLimitPrice.toFixed(2)),
+            photoPoolPrice: Number(photoPoolPrice.toFixed(2)),
+            storageDaysPrice: Number(storageDurationPrice.toFixed(2)),
+            finalPrice: Number(totalPrice.toFixed(2))
+        };
+    }, [selectedPlan, step2Data.plan.guestLimit, step2Data.plan.photoPool, step2Data.plan.storageDays]);
+
+    // FIXED: Calculate guest limit price with proper precision
     const calculateGuestLimitPrice = (): number => {
         if (!selectedPlan) return 0;
         const base = selectedPlan.guestLimit || 1;
         const pricePerGuest = selectedPlan.guestLimitIncreasePricePerGuest || 0;
         const extra = Math.max(0, step2Data.plan.guestLimit - base);
-        return extra * pricePerGuest;
+        
+        // Use proper decimal arithmetic to avoid floating point issues
+        const calculatedPrice = extra * pricePerGuest;
+        return Number(calculatedPrice.toFixed(2));
     };
 
-    // Calculate photo pool price (only for extra photos above base)
+    // FIXED: Calculate photo pool price with proper precision
     const calculatePhotoPoolPrice = (): number => {
         if (!selectedPlan) return 0;
         const base = selectedPlan.photoPool || 1;
         const pricePerPhoto = selectedPlan.photoPoolLimitIncreasePricePerPhoto || 0;
         const extra = Math.max(0, step2Data.plan.photoPool - base);
-        return extra * pricePerPhoto;
+        
+        // Use proper decimal arithmetic to avoid floating point issues
+        const calculatedPrice = extra * pricePerPhoto;
+        return Number(calculatedPrice.toFixed(2));
     };
 
     // Calculate storage duration price based on selected option
@@ -169,28 +159,70 @@ const CreateEventSecondStep: React.FC = () => {
         return currentOption.price || 0;
     };
 
-    // --- Fix: Always include base plan price in finalPrice ---
-    React.useEffect(() => {
-        if (!selectedPlan) return;
+    // Update context when local state changes
+    const updatePlanData = (updates: Partial<typeof step2Data.plan>) => {
+        const newPlanData = {
+            ...step2Data.plan,
+            ...updates
+        };
 
-        const guestLimitPrice = calculateGuestLimitPrice();
-        const photoPoolPrice = calculatePhotoPoolPrice();
-        const storageDurationPrice = calculateStorageDurationPrice();
+        // FIXED: Always recalculate prices after any update
+        if (selectedPlan) {
+            const prices = calculatePrices();
+            if (prices) {
+                newPlanData.finalPrice = prices.finalPrice;
+                newPlanData.guestLimitPrice = prices.guestLimitPrice;
+                newPlanData.photoPoolPrice = prices.photoPoolPrice;
+                newPlanData.storageDaysPrice = prices.storageDaysPrice;
+            }
+        }
 
-        // Always include base plan price
-        const totalPrice = (selectedPlan.price || 0) + guestLimitPrice + photoPoolPrice + storageDurationPrice;
-
-        // Update all price fields as requested
-        updatePlanData({
-            finalPrice: Number(totalPrice?.toFixed(2)),
-            guestLimitPrice: Number(guestLimitPrice?.toFixed(2)),
-            photoPoolPrice: Number(photoPoolPrice?.toFixed(2)),
-            storageDaysPrice: Number(storageDurationPrice?.toFixed(2)),
+        updateStep2Data({
+            plan: newPlanData
         });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedPlan, step2Data.plan.guestLimit, step2Data.plan.photoPool, step2Data.plan.storageDays]);
+    };
 
-    // --- Fix: Keep photosPerGuest in sync with guestLimit and photoPool changes ---
+    // Handle plan selection
+    const handlePlanSelect = (plan: Plan) => {
+        setSelectedPlan(plan);
+        
+        const newPlanData = {
+            planId: plan.id,
+            basePlan: plan.price,
+            guestLimit: plan.guestLimit,
+            photoPool: plan.photoPool,
+            photosPerGuest: getRoundedPhotosPerGuest(plan.photoPool, plan.guestLimit),
+            storageDays: plan.defaultStorageDays,
+            permissions: {
+                canViewGallery: true,
+                canSharePhotos: false,
+                canDownload: false
+            }
+        };
+
+        // FIXED: Calculate prices immediately after plan selection
+        const guestLimitPrice = 0; // No extra guests initially
+        const photoPoolPrice = 0; // No extra photos initially
+        const storageDurationPrice = calculateStorageDurationPrice();
+        const totalPrice = (plan.price || 0) + guestLimitPrice + photoPoolPrice + storageDurationPrice;
+
+        updateStep2Data({
+            plan: {
+                ...newPlanData,
+                finalPrice: Number(totalPrice.toFixed(2)),
+                guestLimitPrice: Number(guestLimitPrice.toFixed(2)),
+                photoPoolPrice: Number(photoPoolPrice.toFixed(2)),
+                storageDaysPrice: Number(storageDurationPrice.toFixed(2)),
+            }
+        });
+
+        // Set selected storage to the first storage option of the new plan
+        if (plan.storageOptions && plan.storageOptions.length > 0) {
+            setSelectedStorage(plan.storageOptions[0]);
+        }
+    };
+
+    // FIXED: Keep photosPerGuest in sync with guestLimit and photoPool changes
     useEffect(() => {
         // Only adjust if the limit is enabled (photosPerGuest > 0)
         if (step2Data.plan.photosPerGuest > 0) {
@@ -206,7 +238,7 @@ const CreateEventSecondStep: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [step2Data.plan.guestLimit, step2Data.plan.photoPool]);
 
-    // --- New: Validate photosPerGuest is not greater than photoPool ---
+    // FIXED: Validate photosPerGuest is not greater than photoPool
     useEffect(() => {
         if (
             typeof step2Data.plan.photosPerGuest === 'number' &&
@@ -341,19 +373,6 @@ const CreateEventSecondStep: React.FC = () => {
                                         })}
                                     />
                                 </View>
-                                {/* <View style={styles.toggleRow}>
-                                    <Text style={styles.toggleLabel}>Allow Guest to Download All in Live Gallery?</Text>
-                                <ToggleSwitch
-                                    checked={step2Data.plan.permissions.canDownload}
-                                    isEditMode={isEditMode}
-                                    onChange={(checked) => updatePlanData({
-                                        permissions: {
-                                            ...step2Data.plan.permissions,
-                                            canDownload: checked
-                                        }
-                                    })}
-                                />
-                                </View> */}
                             </View>
                         </View>
                     )}
@@ -384,7 +403,7 @@ const CreateEventSecondStep: React.FC = () => {
                                     <View style={styles.counterHeader}>
                                         <Text style={styles.counterLabel}>Guest Limit</Text>
                                         <Text style={styles.counterPrice}>
-                                            ${formatPrice(step2Data.plan.guestLimitPrice || calculateGuestLimitPrice())}
+                                            ${formatPrice(step2Data.plan.guestLimitPrice || 0)}
                                         </Text>
                                     </View>
                                     <View style={styles.counterControls}>
@@ -418,7 +437,7 @@ const CreateEventSecondStep: React.FC = () => {
                                     <View style={styles.counterHeader}>
                                         <Text style={styles.counterLabel}>Shared Photo Pool</Text>
                                         <Text style={styles.counterPrice}>
-                                            ${formatPrice(step2Data.plan.photoPoolPrice || calculatePhotoPoolPrice())}
+                                            ${formatPrice(step2Data.plan.photoPoolPrice || 0)}
                                         </Text>
                                     </View>
                                     <View style={styles.counterControls}>
@@ -457,7 +476,6 @@ const CreateEventSecondStep: React.FC = () => {
                                 </View>
                                 <ToggleSwitch
                                     checked={showPhotoPerguest}
-                                    // isEditMode={isEditMode}
                                     onChange={(checked) => {
                                         if (checked) {
                                             setShowPhotoPerguest(true)
@@ -541,7 +559,6 @@ const CreateEventSecondStep: React.FC = () => {
                                 onChange={(value) => {
                                     setSelectedStorage(value);
                                     updatePlanData({ storageDays: value.days });
-                                    console.log('selected storage =>>>>>>>>>', value)
                                 }}
                                 options={selectedPlan?.storageOptions || []}
                                 isEditMode={isEditMode}
@@ -559,8 +576,8 @@ const CreateEventSecondStep: React.FC = () => {
                         maxPerGuest={step2Data.plan.photosPerGuest}
                         basePlan={`$${formatPrice(selectedPlan?.price || 0)}`}
                         photoStorageDuration={getCurrentStorageOptionPrice()}
-                        guestLimitPrice={`$${formatPrice(step2Data.plan.guestLimitPrice !== undefined ? step2Data.plan.guestLimitPrice : calculateGuestLimitPrice())}`}
-                        photoPoolPrice={`$${formatPrice(step2Data.plan.photoPoolPrice !== undefined ? step2Data.plan.photoPoolPrice : calculatePhotoPoolPrice())}`}
+                        guestLimitPrice={`$${formatPrice(step2Data.plan.guestLimitPrice || 0)}`}
+                        photoPoolPrice={`$${formatPrice(step2Data.plan.photoPoolPrice || 0)}`}
                         photosPerGuestPrice={`$${formatPrice(step2Data.plan.photosPerGuest > 0 ? 10 : 0)}`}
                         totalAmount={`$${formatPrice(step2Data.plan.finalPrice)}`}
                         isEditMode={isEditMode}
@@ -582,6 +599,8 @@ const CreateEventSecondStep: React.FC = () => {
         </SafeAreaView>
     );
 };
+
+// ... (keep your existing styles the same)
 
 const styles = StyleSheet.create({
     loaderContainer: {

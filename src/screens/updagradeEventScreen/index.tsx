@@ -9,6 +9,7 @@ import { useCreateEvent } from '../../hooks/useCreateEvent';
 import { planService } from '../../services/planService';
 import { hp, wp } from '../../contants/StyleGuide';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatPrice } from '../../utils/HelperFunctions';
 
 const UpgradeEventScreen: React.FC = () => {
     const [newGuestLimit, setNewGuestLimit] = useState<number>(0);
@@ -37,10 +38,19 @@ const UpgradeEventScreen: React.FC = () => {
     // Track the calculated total cost so we can update finalPrice in step2Data
     const [totalCost, setTotalCost] = useState<number>(0);
 
+    // Track individual prices for guest limit and photo pool
+    const [guestLimitPrice, setGuestLimitPrice] = useState<number>(0);
+    const [photoPoolPrice, setPhotoPoolPrice] = useState<number>(0);
+
     useEffect(() => {
-        // console.log('guestIncreasePrice:', guestIncreasePrice);
-        // console.log('photoIncreasePrice:', photoIncreasePrice);
-    }, [guestIncreasePrice, photoIncreasePrice]);
+        console.log('Price Updates:', {
+            guestLimitPrice,
+            photoPoolPrice,
+            totalCost,
+            guestIncreasePrice,
+            photoIncreasePrice
+        });
+    }, [guestLimitPrice, photoPoolPrice, totalCost, guestIncreasePrice, photoIncreasePrice]);
 
     // Fetch plan details for price calculation
     const fetchPlanByID = useCallback(async (planId: string) => {
@@ -97,12 +107,22 @@ const UpgradeEventScreen: React.FC = () => {
     const calculateTotalCost = useCallback(() => {
         if (guestIncreasePrice === null || photoIncreasePrice === null) return 0;
         let total = 0;
+        let guestPrice = 0;
+        let photoPrice = 0;
+        
         if (newGuestLimit > currentGuestLimit) {
-            total += (newGuestLimit - currentGuestLimit) * guestIncreasePrice;
+            guestPrice = (newGuestLimit - currentGuestLimit) * guestIncreasePrice;
+            total += guestPrice;
         }
         if (newPhotoPool > currentPhotoPool) {
-            total += (newPhotoPool - currentPhotoPool) * photoIncreasePrice;
+            photoPrice = (newPhotoPool - currentPhotoPool) * photoIncreasePrice;
+            total += photoPrice;
         }
+        
+        // Update individual prices
+        setGuestLimitPrice(guestPrice);
+        setPhotoPoolPrice(photoPrice);
+        
         return total;
     }, [guestIncreasePrice, photoIncreasePrice, newGuestLimit, currentGuestLimit, newPhotoPool, currentPhotoPool]);
 
@@ -128,6 +148,8 @@ const UpgradeEventScreen: React.FC = () => {
                     ...originalPlan,
                     guestLimit: newGuestLimit,
                     photoPool: newPhotoPool,
+                    guestLimitPrice: formatPrice(guestLimitPrice),
+                    photoPoolPrice: formatPrice(photoPoolPrice),
                     permissions: {
                         canViewGallery,
                         canSharePhotos: canSharePhoto,
@@ -146,6 +168,8 @@ const UpgradeEventScreen: React.FC = () => {
         originalPlan,
         updateStep2Data,
         totalCost,
+        guestLimitPrice,
+        photoPoolPrice,
     ]);
 
     const handleGuestLimitChange = (value: number) => {
@@ -235,7 +259,7 @@ const UpgradeEventScreen: React.FC = () => {
                             {/* Total Cost */}
                             <View style={styles.totalCostRow}>
                                 <Text style={styles.totalCostText}>
-                                    Total Cost: ${totalCost.toFixed(2)}
+                                    Total Cost: ${totalCost?.toFixed(2)}
                                 </Text>
                             </View>
 

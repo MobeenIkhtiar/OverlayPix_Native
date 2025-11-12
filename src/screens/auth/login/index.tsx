@@ -172,9 +172,9 @@ const Login: React.FC = () => {
                 safeNavigate('/joinedEvent');
                 return;
             } else {
-                // safeNavigate('/dashboard');
-
-                navigation.navigate('joinedEvent');
+                navigation.replace('dashboard');
+            console.log('token=>>>>>>>>>>>>>>',token)
+            //     navigation.navigate('joinedEvent');
                 return;
             }
         } catch {
@@ -242,6 +242,7 @@ const Login: React.FC = () => {
         setError('');
         setLoading(true);
         try {
+            console.log('Facebook Login=>>>>>>>>>>.',);
             const res = await loginWithFacebook(isGuest);
             await setItem('guest_login', isGuest.toString());
 
@@ -414,7 +415,7 @@ const Login: React.FC = () => {
 
                         <TouchableOpacity
                             style={styles.forgotPasswordContainer}
-                            onPress={() => safeNavigate('/forgotPassword')}
+                            onPress={() => navigation.navigate('forgotPassword')}
                         >
                             <Text style={styles.forgotPasswordText}>
                                 Forgot Password
@@ -428,13 +429,14 @@ const Login: React.FC = () => {
                         </View>
 
                         <View style={styles.socialButtonsContainer}>
-                            {Platform.OS === 'android' && <TouchableOpacity
+               <TouchableOpacity
                                 style={styles.socialButton}
                                 onPress={handleGoogleLogin}
                                 disabled={loading}
                             >
                                 <Image source={icons.google} style={styles.socialIcon} />
-                            </TouchableOpacity>}
+                            </TouchableOpacity>
+                            
                             <TouchableOpacity
                                 style={styles.socialButton}
                                 onPress={handleFacebookLogin}
@@ -442,13 +444,15 @@ const Login: React.FC = () => {
                             >
                                 <Image source={icons.facebook} style={styles.socialIcon} />
                             </TouchableOpacity>
-                            {Platform.OS === 'ios' && <TouchableOpacity
+                            {
+                            Platform.OS === 'ios' && <TouchableOpacity
                                 style={styles.socialButton}
                                 onPress={handleAppleLogin}
                                 disabled={loading}
                             >
                                 <Image source={icons.apple} style={styles.socialIcon} />
-                            </TouchableOpacity>}
+                            </TouchableOpacity>
+                            }
                         </View>
 
                         <View style={styles.signUpContainer}>

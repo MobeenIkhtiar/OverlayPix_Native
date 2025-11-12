@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -6,27 +6,57 @@ import {
     TextInput,
     Image,
     StyleSheet,
-    ActivityIndicator
+    ActivityIndicator,
+    Platform
 } from 'react-native';
 import type { EventPayment } from '../types/createEvent';
-import { CardField } from '@stripe/stripe-react-native';
+import { CardField, useStripe, PlatformPay } from '@stripe/stripe-react-native';
 import { useCreateEvent } from '../hooks/useCreateEvent';
 import { planService } from '../services/planService';
 import { icons } from '../contants/Icons';
 import { wp, hp } from '../contants/StyleGuide';
 
-const paymentMethods = [
-    {
-        label: 'Credit Card',
-        value: 'card',
-        icons: [icons.mastercardLogo, icons.visa],
-    },
-    {
-        label: 'Cash App',
+const getPaymentMethods = (isApplePaySupported: boolean, isGooglePaySupported: boolean) => {
+    const methods = [
+        {
+            label: 'Credit Card',
+            value: 'card',
+            icons: [icons.mastercardLogo, icons.visa],
+        },
+    ];
+
+    if (Platform.OS === 'ios' && isApplePaySupported) {
+        methods.push({
+            label: 'Apple Pay',
+            value: 'applepay',
+            icons: [icons.applePay],
+        });
+    }
+
+    if (Platform.OS === 'android' && isGooglePaySupported) {
+        methods.push({
+            label: 'Google Pay',
+            value: 'googlepay',
+            icons: [icons.googlePay],
+        });
+    }
+
+    // Add Cash App Pay (available on both iOS and Android)
+    methods.push({
+        label: 'Cash App Pay',
         value: 'cashapp',
         icons: [icons.cashApp],
-    },
-];
+    });
+
+    // Add PayPal (available on both iOS and Android)
+    methods.push({
+        label: 'PayPal',
+        value: 'paypal',
+        icons: [icons.paypal],
+    });
+
+    return methods;
+};
 
 interface PaymentFormProps {
     paymentData?: EventPayment;
@@ -56,9 +86,29 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
     const [discountMessage, setDiscountMessage] = useState('');
     const [discountMessageType, setDiscountMessageType] = useState<'success' | 'error' | ''>('');
+    const [isApplePaySupported, setIsApplePaySupported] = useState(false);
+    const [isGooglePaySupported, setIsGooglePaySupported] = useState(false);
 
     const { step2Data } = useCreateEvent();
+    const { isPlatformPaySupported, confirmPlatformPayPayment } = useStripe();
     const isFreePlan = step2Data?.plan?.finalPrice === 0;
+
+    // Check if Apple Pay or Google Pay is supported
+    useEffect(() => {
+        const checkPlatformPaySupport = async () => {
+            try {
+                const isSupported = await isPlatformPaySupported();
+                if (Platform.OS === 'ios') {
+                    setIsApplePaySupported(isSupported);
+                } else if (Platform.OS === 'android') {
+                    setIsGooglePaySupported(isSupported);
+                }
+            } catch (error) {
+                console.error('Error checking platform pay support:', error);
+            }
+        };
+        checkPlatformPaySupport();
+    }, [isPlatformPaySupported]);
 
     const handleApplyDicountCode = async (discountCode: string) => {
         setCodeLoading(true);
@@ -118,7 +168,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             {/* Payment method selection */}
             {!isFreePlan && (
                 <View style={styles.paymentMethodsContainer}>
-                    {paymentMethods.map((method: any) => {
+                    {getPaymentMethods(isApplePaySupported, isGooglePaySupported).map((method: any) => {
                         const isSelected = selected === method.value;
 
                         return (
@@ -161,6 +211,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         }}
                         cardStyle={{
                             backgroundColor: '#FFFFFF',
+                            placeholderColor: '#9e9e9e',
                             textColor: '#333333',
                             borderColor: '#E6F7FA',
                             borderWidth: 1,
@@ -171,30 +222,90 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                 </View>
             )}
 
-            {/* Cash App Payment */}
-            {!isFreePlan && selected === 'cashapp' && (
-                <View style={styles.cashAppContainer}>
-                    <Text style={styles.label}>Cash App Payment</Text>
-                    <View style={styles.cashAppBox}>
-                        <View style={styles.cashAppContent}>
+            {/* Apple Pay Payment */}
+            {!isFreePlan && selected === 'applepay' && Platform.OS === 'ios' && (
+                <View style={styles.digitalPaymentContainer}>
+                    <Text style={styles.label}>Apple Pay</Text>
+                    <View style={styles.digitalPaymentBox}>
+                        <View style={styles.digitalPaymentContent}>
                             <Image
-                                source={icons.cashApp}
-                                style={styles.cashAppIcon}
+                                source={icons.applePay}
+                                style={styles.digitalPaymentIcon}
                                 resizeMode="contain"
                             />
-                            <Text style={styles.cashAppText}>
-                                Cash App payment will be processed securely
+                            <Text style={styles.digitalPaymentText}>
+                                Pay securely with Apple Pay
                             </Text>
                         </View>
                     </View>
+                    <Text style={styles.digitalPaymentNote}>
+                        You'll be prompted to authenticate with Face ID, Touch ID, or passcode when you complete your purchase.
+                    </Text>
                 </View>
             )}
 
-            {/* Apple Pay / Google Pay - TODO: Implement with React Native Stripe native payment methods */}
-            {!isFreePlan && (selected === 'apple' || selected === 'google') && (
+            {/* Google Pay Payment */}
+            {!isFreePlan && selected === 'googlepay' && Platform.OS === 'android' && (
                 <View style={styles.digitalPaymentContainer}>
-                    <Text style={styles.placeholderText}>
-                        {selected === 'apple' ? 'Apple Pay' : 'Google Pay'} coming soon
+                    <Text style={styles.label}>Google Pay</Text>
+                    <View style={styles.digitalPaymentBox}>
+                        <View style={styles.digitalPaymentContent}>
+                            <Image
+                                source={icons.googlePay}
+                                style={styles.digitalPaymentIcon}
+                                resizeMode="contain"
+                            />
+                            <Text style={styles.digitalPaymentText}>
+                                Pay securely with Google Pay
+                            </Text>
+                        </View>
+                    </View>
+                    <Text style={styles.digitalPaymentNote}>
+                        You'll be prompted to confirm your payment with Google Pay when you complete your purchase.
+                    </Text>
+                </View>
+            )}
+
+            {/* Cash App Pay Payment */}
+            {!isFreePlan && selected === 'cashapp' && (
+                <View style={styles.digitalPaymentContainer}>
+                    <Text style={styles.label}>Cash App Pay</Text>
+                    <View style={styles.digitalPaymentBox}>
+                        <View style={styles.digitalPaymentContent}>
+                            <Image
+                                source={icons.cashApp}
+                                style={styles.digitalPaymentIcon}
+                                resizeMode="contain"
+                            />
+                            <Text style={styles.digitalPaymentText}>
+                                Pay securely with Cash App
+                            </Text>
+                        </View>
+                    </View>
+                    <Text style={styles.digitalPaymentNote}>
+                        You'll be redirected to Cash App to complete your payment securely.
+                    </Text>
+                </View>
+            )}
+
+            {/* PayPal Payment */}
+            {!isFreePlan && selected === 'paypal' && (
+                <View style={styles.digitalPaymentContainer}>
+                    <Text style={styles.label}>PayPal</Text>
+                    <View style={styles.digitalPaymentBox}>
+                        <View style={styles.digitalPaymentContent}>
+                            <Image
+                                source={icons.paypal}
+                                style={styles.digitalPaymentIcon}
+                                resizeMode="contain"
+                            />
+                            <Text style={styles.digitalPaymentText}>
+                                Pay securely with PayPal
+                            </Text>
+                        </View>
+                    </View>
+                    <Text style={styles.digitalPaymentNote}>
+                        You'll be redirected to PayPal to complete your payment securely.
                     </Text>
                 </View>
             )}
@@ -335,41 +446,40 @@ const styles = StyleSheet.create({
         color: '#999999',
         textAlign: 'center',
     },
-    cashAppContainer: {
+    digitalPaymentContainer: {
         gap: hp(1.5),
         marginTop: hp(1),
     },
-    cashAppBox: {
+    digitalPaymentBox: {
         borderWidth: 1,
         borderColor: '#E6F7FA',
         borderRadius: wp(2),
         paddingHorizontal: wp(3),
         paddingVertical: hp(2),
-        minHeight: hp(5),
+        minHeight: hp(6),
         backgroundColor: '#F9F9F9',
     },
-    cashAppContent: {
+    digitalPaymentContent: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        height: hp(5),
+        minHeight: hp(5),
     },
-    cashAppIcon: {
-        height: hp(3),
-        width: wp(6),
+    digitalPaymentIcon: {
+        height: hp(4),
+        width: wp(12),
         marginRight: wp(2),
     },
-    cashAppText: {
+    digitalPaymentText: {
         fontSize: wp(3.5),
         color: '#666666',
+        fontWeight: '500',
     },
-    digitalPaymentContainer: {
-        marginTop: hp(2),
-        padding: hp(2),
-        borderWidth: 1,
-        borderColor: '#E6F7FA',
-        borderRadius: wp(2),
-        backgroundColor: '#FFFFFF',
+    digitalPaymentNote: {
+        fontSize: wp(3),
+        color: '#999999',
+        marginTop: hp(1),
+        lineHeight: wp(4.5),
     },
     loadingContainer: {
         marginTop: hp(2),

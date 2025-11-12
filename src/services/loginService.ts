@@ -15,7 +15,9 @@ import {
 import { getFirestore, doc, setDoc, getDoc, updateDoc } from '@react-native-firebase/firestore';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
-import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
+import { LoginManager, AccessToken, Settings, AuthenticationToken } from 'react-native-fbsdk-next';
+import { Platform } from 'react-native';
+import { sha256 } from 'react-native-sha256';
 
 // Import the default auth and db instances
 export const auth = getAuth();
@@ -178,20 +180,46 @@ const convertAnonymousUserFacebook = async (isGuest: boolean) => {
     }
 
     try {
-        // Get Facebook credentials
-        const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+        let facebookCredential;
 
-        if (result.isCancelled) {
-            throw new Error('User cancelled the login process');
+        if (Platform.OS === 'ios') {
+            // iOS-specific implementation with limited login and nonce
+            const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const nonceSha256 = await sha256(nonce);
+
+            const result = await LoginManager.logInWithPermissions(
+                ['public_profile', 'email'],
+                'limited',
+                nonceSha256,
+            );
+
+            if (result.isCancelled) {
+                throw new Error('User cancelled the login process');
+            }
+
+            const data = await AuthenticationToken.getAuthenticationTokenIOS();
+
+            if (!data) {
+                throw new Error('Something went wrong obtaining authentication token');
+            }
+
+            facebookCredential = FacebookAuthProvider.credential(data.authenticationToken, nonce);
+        } else {
+            // Android implementation
+            const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+
+            if (result.isCancelled) {
+                throw new Error('User cancelled the login process');
+            }
+
+            const data = await AccessToken.getCurrentAccessToken();
+
+            if (!data) {
+                throw new Error('Something went wrong obtaining access token');
+            }
+
+            facebookCredential = FacebookAuthProvider.credential(data.accessToken);
         }
-
-        const data = await AccessToken.getCurrentAccessToken();
-
-        if (!data) {
-            throw new Error('Something went wrong obtaining access token');
-        }
-
-        const facebookCredential = FacebookAuthProvider.credential(data.accessToken);
 
         // Link the anonymous account with Facebook
         const linkResult = await linkWithCredential(currentUser, facebookCredential);
@@ -340,45 +368,87 @@ export const loginWithGoogle = async (isGuest: boolean) => {
     }
 };
 
-export const loginWithFacebook = async (isGuest: boolean) => {
+export const loginWithFacebook = async (isGuest = false) => {
     try {
-        // Check if current user is anonymous
         const currentUser = auth.currentUser;
         if (currentUser && currentUser.isAnonymous) {
+            console.log('User is anonymous, converting to Facebook...');
             return await convertAnonymousUserFacebook(isGuest);
         }
 
-        // Attempt login with permissions
-        const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+        // Ensure previous session is cleared
+        LoginManager.logOut();
 
-        if (result.isCancelled) {
-            throw new Error('User cancelled the login process');
+        console.log('Starting Facebook login...');
+        
+        let facebookCredential;
+        let signInResult;
+
+        if (Platform.OS === 'ios') {
+            // iOS-specific implementation with limited login and nonce
+            const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const nonceSha256 = await sha256(nonce);
+
+            const result = await LoginManager.logInWithPermissions(
+                ['public_profile', 'email'],
+                'limited',
+                nonceSha256,
+            );
+
+            if (result.isCancelled) {
+                throw new Error('User cancelled Facebook login');
+            }
+
+            const data = await AuthenticationToken.getAuthenticationTokenIOS();
+            console.log('Facebook AuthenticationToken ios=>>>>>>:', data);
+
+            if (!data) {
+                throw new Error('Something went wrong obtaining authentication token');
+            }
+
+            // Create Firebase credential with the authentication token and nonce
+            facebookCredential = FacebookAuthProvider.credential(data.authenticationToken, nonce);
+
+            // Sign in with Firebase
+            signInResult = await signInWithCredential(auth, facebookCredential);
+            console.log('Logged in via Facebook (iOS):', signInResult.user);
+        } else {
+            // Android implementation
+            const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+
+            if (result.isCancelled) {
+                throw new Error('User cancelled Facebook login');
+            }
+
+            // Get the current access token
+            const data = await AccessToken.getCurrentAccessToken();
+            console.log('Facebook AccessToken:', data);
+
+            if (!data || !data.accessToken) {
+                throw new Error('Failed to obtain access token from Facebook');
+            }
+
+            // Optional: Validate the token (for debugging)
+            const tokenCheck = await fetch(`https://graph.facebook.com/me?access_token=${data.accessToken}`);
+            const tokenJson = await tokenCheck.json();
+            console.log('Graph API token validation:', tokenJson);
+
+            // Create Firebase credential
+            facebookCredential = FacebookAuthProvider.credential(data.accessToken);
+
+            // Sign in with Firebase
+            signInResult = await signInWithCredential(auth, facebookCredential);
+            console.log('Logged in via Facebook (Android):', signInResult.user);
         }
 
-        // Once signed in, get the users AccessToken
-        const data = await AccessToken.getCurrentAccessToken();
-
-        if (!data) {
-            throw new Error('Something went wrong obtaining access token');
-        }
-
-        // Create a Firebase credential with the AccessToken
-        const facebookCredential = FacebookAuthProvider.credential(data.accessToken);
-
-        // Sign-in the user with the credential
-        const signInResult = await signInWithCredential(auth, facebookCredential);
-        console.log("Logged in facebook:", signInResult.user);
-
-        // Check if user already exists in Firestore
-        const userDocRef = doc(db, "users", signInResult.user.uid);
+        // Firestore user management
+        const userDocRef = doc(db, 'users', signInResult.user.uid);
         const userDoc = await getDoc(userDocRef);
 
         let role = isGuest ? 'guest' : 'client';
-
-        // If user already exists, preserve their existing role
         if (userDoc.exists()) {
             const existingData = userDoc.data();
-            role = existingData?.role || role; // Keep existing role if it exists
+            role = existingData?.role || role;
         }
 
         await setDoc(userDocRef, {
@@ -386,12 +456,13 @@ export const loginWithFacebook = async (isGuest: boolean) => {
             email: signInResult.user.email,
             fullName: signInResult.user.displayName,
             role: role,
-            provider: "facebook",
-            createdAt: new Date().toISOString()
+            provider: 'facebook',
+            createdAt: new Date().toISOString(),
         }, { merge: true });
 
         const token = await signInResult.user.getIdToken();
         return { user: signInResult.user, token, converted: false };
+
     } catch (error) {
         console.error('Facebook login error:', error);
         throw error;

@@ -137,7 +137,6 @@ const TermsAndPolicy: React.FC = () => {
     // Fallbacks if eventData is not loaded
     const eventName = eventData?.eventName || "Event";
     const hostName = eventData?.ownerName || "Event Host";
-    // const eventImage = eventData?.eventImage || images.image11;
     const totalPictures = eventData?.guestPicturesLeft ?? 0;
     const maxPictures = eventData?.guestPicturesMax ?? 0;
 

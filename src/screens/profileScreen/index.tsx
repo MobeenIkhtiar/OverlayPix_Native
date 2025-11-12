@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { LoginManager } from 'react-native-fbsdk-next';
+import { auth } from '../../services/loginService';
 
 const TIMEZONES = [
     'Pacific Time',
@@ -205,6 +206,9 @@ const ProfileScreen: React.FC = () => {
                 console.warn('Facebook logout error:', facebookError);
             }
 
+            // Sign out from Firebase
+            await auth.signOut();
+            
             // Notify user and navigate to login
             Alert.alert('Logout', 'You have been logged out successfully.');
             navigation.reset({ index: 0, routes: [{ name: 'login' }] });

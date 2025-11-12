@@ -8,7 +8,49 @@ import Stepper from '../../components/Stepper';
 import { useCreateEvent } from '../../hooks/useCreateEvent';
 import Loader from '../../components/Loader';
 import ColorPickerModal from '../../components/ColorPickerModal';
+import CustomDropdown from '../../components/CustomDropdown';
 import { wp, hp } from '../../contants/StyleGuide';
+
+// Font options
+const FONT_FAMILIES = [
+    { label: 'System', value: 'System' },
+    { label: 'Arial', value: 'Arial' },
+    { label: 'Helvetica', value: 'Helvetica' },
+    { label: 'Times New Roman', value: 'Times New Roman' },
+    { label: 'Courier New', value: 'Courier New' },
+    { label: 'Georgia', value: 'Georgia' },
+    { label: 'Verdana', value: 'Verdana' },
+];
+
+const FONT_WEIGHTS = [
+    { label: 'Normal', value: 'normal' },
+    { label: 'Bold', value: 'bold' },
+    { label: '100', value: '100' },
+    { label: '200', value: '200' },
+    { label: '300', value: '300' },
+    { label: '400', value: '400' },
+    { label: '500', value: '500' },
+    { label: '600', value: '600' },
+    { label: '700', value: '700' },
+    { label: '800', value: '800' },
+    { label: '900', value: '900' },
+];
+
+const FONT_SIZES = [
+    { label: '12px', value: '12' },
+    { label: '14px', value: '14' },
+    { label: '16px', value: '16' },
+    { label: '18px', value: '18' },
+    { label: '20px', value: '20' },
+    { label: '22px', value: '22' },
+    { label: '24px', value: '24' },
+    { label: '26px', value: '26' },
+    { label: '28px', value: '28' },
+    { label: '30px', value: '30' },
+    { label: '32px', value: '32' },
+    { label: '36px', value: '36' },
+    { label: '40px', value: '40' },
+];
 
 const CreateEventThirdStep: React.FC = () => {
     const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -148,34 +190,31 @@ const CreateEventThirdStep: React.FC = () => {
                         </Text>
                         <View style={styles.typographyFields}>
                             {/* Font Family Dropdown */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Font Family</Text>
-                                <View style={styles.pickerWrapper}>
-                                    <TouchableOpacity style={styles.picker}>
-                                        <Text style={styles.pickerText}>{step3Data.fontFamily}</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
+                            <CustomDropdown
+                                label="Font Family"
+                                value={step3Data.fontFamily || 'System'}
+                                options={FONT_FAMILIES}
+                                onSelect={(value) => updateStep3Data({ fontFamily: value })}
+                                placeholder="Select Font Family"
+                            />
 
                             {/* Font Weight Dropdown */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Font Weight</Text>
-                                <View style={styles.pickerWrapper}>
-                                    <TouchableOpacity style={styles.picker}>
-                                        <Text style={styles.pickerText}>{step3Data.fontWeight.charAt(0).toUpperCase() + step3Data.fontWeight.slice(1)}</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
+                            <CustomDropdown
+                                label="Font Weight"
+                                value={step3Data.fontWeight || 'normal'}
+                                options={FONT_WEIGHTS}
+                                onSelect={(value) => updateStep3Data({ fontWeight: value })}
+                                placeholder="Select Font Weight"
+                            />
 
                             {/* Font Size Dropdown */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Font Size</Text>
-                                <View style={styles.pickerWrapper}>
-                                    <TouchableOpacity style={styles.picker}>
-                                        <Text style={styles.pickerText}>{step3Data.fontSize}px</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
+                            <CustomDropdown
+                                label="Font Size"
+                                value={step3Data.fontSize.toString() || '18'}
+                                options={FONT_SIZES}
+                                onSelect={(value) => updateStep3Data({ fontSize: value })}
+                                placeholder="Select Font Size"
+                            />
                         </View>
                     </View>
 
@@ -385,30 +424,6 @@ const styles = StyleSheet.create({
     },
     typographyFields: {
         gap: hp(1.5),
-    },
-    fieldContainer: {
-        gap: hp(0.5),
-    },
-    fieldLabel: {
-        fontSize: wp(3.5),
-        fontWeight: '500',
-        color: '#666666',
-    },
-    pickerWrapper: {
-        width: '100%',
-    },
-    picker: {
-        width: '100%',
-        borderWidth: 1,
-        borderColor: '#E5E5E5',
-        borderRadius: wp(1.5),
-        paddingHorizontal: wp(4),
-        paddingVertical: hp(1.5),
-        backgroundColor: '#FFFFFF',
-    },
-    pickerText: {
-        fontSize: wp(3.5),
-        color: '#666666',
     },
     uploadSection: {
         marginBottom: hp(3),

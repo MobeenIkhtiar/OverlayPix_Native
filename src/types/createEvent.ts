@@ -28,7 +28,8 @@ export interface CustomPlan {
 
 export interface EventPayment {
     method: string;
-    paymentIntentId: string;
+    paymentIntentId?: string;
+    paypalOrderId?: string;
 }
 
 export interface EventBranding {

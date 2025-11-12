@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Animated, Platform, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Camera, useCameraDevice, CameraPermissionStatus } from 'react-native-vision-camera';
-import { Canvas, Image as SkiaImage, useImage, makeImageFromView } from '@shopify/react-native-skia';
+import { Canvas, Image as SkiaImage, useImage, makeImageFromView, Skia } from '@shopify/react-native-skia';
 import Loader from '../../../components/Loader';
 import { guestServices } from '../../../services/guestsService';
 import { HEIGHT, hp, wp } from '../../../contants/StyleGuide';
@@ -206,12 +206,58 @@ const TakePictureScreen = () => {
             const cameraUri = `file://${photo.path}`;
             
             // If we have an overlay, composite it with Skia
-            if (imageOverlay && cameraViewRef.current) {
+            if (imageOverlay) {
                 try {
-                    // Use Skia's makeImageFromView to capture the entire view with proper alpha blending
-                    const snapshot:any = await makeImageFromView(cameraViewRef);
+                    // Get screen dimensions
+                    const { width, height } = Dimensions.get('window');
+                    
+                    // Load both images as Skia images
+                    const cameraResponse = await fetch(cameraUri);
+                    const cameraBuffer = await cameraResponse.arrayBuffer();
+                    const cameraData = Skia.Data.fromBytes(new Uint8Array(cameraBuffer));
+                    const cameraImage = Skia.Image.MakeImageFromEncoded(cameraData);
+                    
+                    const overlayResponse = await fetch(imageOverlay);
+                    const overlayBuffer = await overlayResponse.arrayBuffer();
+                    const overlayData = Skia.Data.fromBytes(new Uint8Array(overlayBuffer));
+                    const overlaySkiaImage = Skia.Image.MakeImageFromEncoded(overlayData);
+                    
+                    if (!cameraImage || !overlaySkiaImage) {
+                        throw new Error('Failed to load images for compositing');
+                    }
+                    
+                    // Create a surface to draw on
+                    const surface = Skia.Surface.Make(width, height);
+                    if (!surface) {
+                        throw new Error('Failed to create Skia surface');
+                    }
+                    
+                    const canvas = surface.getCanvas();
+                    
+                    // Draw camera image (background)
+                    const cameraRect = Skia.XYWHRect(0, 0, width, height);
+                    canvas.drawImageRect(
+                        cameraImage,
+                        Skia.XYWHRect(0, 0, cameraImage.width(), cameraImage.height()),
+                        cameraRect,
+                        Skia.Paint()
+                    );
+                    
+                    // Draw overlay image on top with proper alpha blending
+                    const overlayPaint = Skia.Paint();
+                    overlayPaint.setAlphaf(0.98); // Match the opacity from overlayImage style
+                    canvas.drawImageRect(
+                        overlaySkiaImage,
+                        Skia.XYWHRect(0, 0, overlaySkiaImage.width(), overlaySkiaImage.height()),
+                        cameraRect,
+                        overlayPaint
+                    );
+                    
+                    // Get the final image
+                    const snapshot = surface.makeImageSnapshot();
                     const base64 = snapshot.encodeToBase64();
                     const compositeUri = `data:image/png;base64,${base64}`;
+                    
                     setCapturedImage(compositeUri);
                 } catch (compositeError) {
                     console.error('Composite error:', compositeError);

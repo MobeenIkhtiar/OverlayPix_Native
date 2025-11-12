@@ -292,7 +292,7 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
             }));
             formData.append('finalPrice', String(finalPrice));
 
-            if (step4Data.payment && step4Data.payment.paymentIntentId) {
+            if (step4Data.payment && (step4Data.payment.paymentIntentId || step4Data.payment.paypalOrderId)) {
                 formData.append('payment', JSON.stringify({
                     ...step4Data.payment,
                 }));
@@ -467,7 +467,7 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
             if (eventData) {
                 updateStep3Data({
                     brandColor: eventData?.brandColor || '#3DA9B7',
-                    fontFamily: eventData?.fontFamily || 'inter',
+                    fontFamily: eventData?.typography || 'inter',
                     fontWeight: (eventData.fontStyle || 'bold').toLowerCase(),
                     fontSize: eventData?.fontSize || '12',
                     eventPicture: eventData?.eventPictureUrl || null
