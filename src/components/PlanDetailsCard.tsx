@@ -23,19 +23,19 @@ const PlanDetailsCard: React.FC<PlanDetailsCardProps> = ({
     const planDetails = [
         {
             label: 'Base Plan',
-            value: step2Data.plan?.basePlan != null ? `$${step2Data.plan.basePlan}` : '$0',
+            value: step2Data.plan?.basePlan != null ? `$${formatPrice(step2Data.plan.basePlan)}` : '$0',
         },
         {
             label: `Photo Storage Duration (${step2Data?.plan?.storageDays} days)`,
-            value: `$${step2Data?.plan?.storageDaysPrice ?? 0}`,
+            value: `$${formatPrice(step2Data?.plan?.storageDaysPrice ?? 0)}`,
         },
         {
             label: `Guest Limit ( ${step2Data?.plan?.guestLimit ?? 0} guests )`,
-            value: `$${step2Data?.plan?.guestLimitPrice ?? 0}`,
+            value: `$${formatPrice(step2Data?.plan?.guestLimitPrice ?? 0)}`,
         },
         {
             label: `Photo Pool ( ${step2Data?.plan?.photoPool ?? 0} photos )`,
-            value: `$${step2Data?.plan?.photoPoolPrice ?? 0}`,
+            value: `$${formatPrice(step2Data?.plan?.photoPoolPrice ?? 0)}`,
         },
         {
             label: 'Discount',
@@ -90,7 +90,7 @@ const PlanDetailsCard: React.FC<PlanDetailsCardProps> = ({
                             <Text style={styles.nextButtonText}>Processing...</Text>
                         </View>
                     ) : (
-                        <Text style={styles.nextButtonText}>Pay and Continue</Text>
+                        <Text style={styles.nextButtonText}>{step2Data?.plan?.finalPrice > 0 ? 'Pay and Continue' : 'Create Event'}</Text>
                     )}
                 </TouchableOpacity>
             </View>

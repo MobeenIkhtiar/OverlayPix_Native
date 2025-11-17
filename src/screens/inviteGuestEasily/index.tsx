@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -6,6 +6,8 @@ import {
     StyleSheet,
     ActivityIndicator,
     ScrollView,
+    Platform,
+    PermissionsAndroid,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { dashboardService } from '../../services/dashboardService';
@@ -15,6 +17,8 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import Toast from 'react-native-toast-message';
 import { hp, wp } from '../../contants/StyleGuide';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import ViewShot from 'react-native-view-shot';
+import RNFS from 'react-native-fs';
 
 const InviteGuestEasily: React.FC = () => {
     const navigation = useNavigation();
@@ -24,6 +28,8 @@ const InviteGuestEasily: React.FC = () => {
     const [eventData, setEventData] = useState<EventData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [downloading, setDownloading] = useState(false);
+    const qrCodeRef = useRef<ViewShot>(null);
 
     useEffect(() => {
         const fetchEventData = async () => {
@@ -75,19 +81,113 @@ const InviteGuestEasily: React.FC = () => {
         });
     };
 
-    // Download QR code is not natively supported in React Native without extra packages or native code.
-    // We'll show a toast instead.
-    const handleDownloadQRCode = () => {
-        Toast.show({
-            type: 'info',
-            text1: 'To save the QR code, take a screenshot.',
-            visibilityTime: 2000,
-            position: 'top',
-        });
+    // Request storage permission for Android
+    const requestStoragePermission = async (): Promise<boolean> => {
+        if (Platform.OS !== 'android') {
+            return true;
+        }
+
+        try {
+            if (Platform.Version >= 33) {
+                // Android 13+ doesn't need WRITE_EXTERNAL_STORAGE
+                return true;
+            }
+
+            const granted = await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+                {
+                    title: 'Storage Permission',
+                    message: 'App needs access to your storage to save QR code',
+                    buttonNeutral: 'Ask Me Later',
+                    buttonNegative: 'Cancel',
+                    buttonPositive: 'OK',
+                }
+            );
+            return granted === PermissionsAndroid.RESULTS.GRANTED;
+        } catch (err) {
+            console.warn('Permission error:', err);
+            return false;
+        }
+    };
+
+    // Download QR code as image
+    const handleDownloadQRCode = async () => {
+        if (!qrCodeRef.current || !eventData?.shareCode) {
+            Toast.show({
+                type: 'error',
+                text1: 'Unable to download QR code',
+                text2: 'Please try again',
+                visibilityTime: 2000,
+                position: 'top',
+            });
+            return;
+        }
+
+        try {
+            setDownloading(true);
+
+            // Request permission
+            const hasPermission = await requestStoragePermission();
+            if (!hasPermission) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Permission Denied',
+                    text2: 'Storage permission is required to save QR code',
+                    visibilityTime: 3000,
+                    position: 'top',
+                });
+                setDownloading(false);
+                return;
+            }
+
+            // Capture the QR code as image
+            const uri = await qrCodeRef.current?.capture?.();
+
+            if (!uri) {
+                throw new Error('Failed to capture QR code');
+            }
+
+            // Define file path
+            const fileName = `QRCode_${eventData.shareCode}_${Date.now()}.png`;
+            const destPath = Platform.select({
+                ios: `${RNFS.DocumentDirectoryPath}/${fileName}`,
+                android: `${RNFS.DownloadDirectoryPath}/${fileName}`,
+            });
+
+            if (!destPath) {
+                throw new Error('Unable to determine save path');
+            }
+
+            // Copy file to destination
+            await RNFS.copyFile(uri, destPath);
+
+            Toast.show({
+                type: 'success',
+                text1: '✔️ QR Code Downloaded!',
+                text2: Platform.OS === 'ios'
+                    ? 'Saved to Files app'
+                    : `Saved to Downloads/${fileName}`,
+                visibilityTime: 3000,
+                position: 'top',
+            });
+        } catch (err) {
+            console.error('Download error:', err);
+            Toast.show({
+                type: 'error',
+                text1: 'Download Failed',
+                text2: 'Unable to save QR code. Please try again.',
+                visibilityTime: 3000,
+                position: 'top',
+            });
+        } finally {
+            setDownloading(false);
+        }
     };
 
     const eventShareUrl = eventData?.shareCode
-        ? `https://overlaypix.com/termsAndPolicy/${eventData.shareCode}`
+        ?
+        //  `https://overlaypix.com/termsAndPolicy/${eventData.shareCode}`
+        `http://192.168.100.108:5173/event/${eventData.shareCode}`
         : '';
 
     if (loading) {
@@ -144,7 +244,15 @@ const InviteGuestEasily: React.FC = () => {
                     </Text>
 
                     {/* QR Code */}
-                    <View style={styles.qrContainer}>
+                    <ViewShot
+                        ref={qrCodeRef}
+                        options={{
+                            format: 'png',
+                            quality: 1.0,
+                            result: 'tmpfile'
+                        }}
+                        style={styles.qrContainer}
+                    >
                         <View style={styles.qrInner}>
                             {eventShareUrl ? (
                                 <QRCode
@@ -159,7 +267,7 @@ const InviteGuestEasily: React.FC = () => {
                                 </View>
                             )}
                         </View>
-                    </View>
+                    </ViewShot>
 
                     <Text style={styles.eventName}>
                         {eventData?.name || 'Event Title'}
@@ -174,10 +282,15 @@ const InviteGuestEasily: React.FC = () => {
                             <Text style={styles.actionButtonText}>Copy Event Link</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={styles.actionButton}
+                            style={[styles.actionButton, downloading && styles.actionButtonDisabled]}
                             onPress={handleDownloadQRCode}
+                            disabled={downloading}
                         >
-                            <Text style={styles.actionButtonText}>Download</Text>
+                            {downloading ? (
+                                <ActivityIndicator size="small" color="#1CA6B5" />
+                            ) : (
+                                <Text style={styles.actionButtonText}>Download</Text>
+                            )}
                         </TouchableOpacity>
                     </View>
 
@@ -302,6 +415,9 @@ const styles = StyleSheet.create({
         color: '#1CA6B5',
         fontSize: wp(3.2),
         fontWeight: '400',
+    },
+    actionButtonDisabled: {
+        opacity: 0.6,
     },
     shareCodeText: {
         color: '#666666',

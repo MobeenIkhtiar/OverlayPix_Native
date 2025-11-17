@@ -78,8 +78,8 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     // Validation functions
     const isStep1Valid = useCallback(() => {
-        const { name, type, date, timeZone, endTime, startTime } = step1Data;
-        return name.trim().length >= 3 && type !== '' && date !== '' && timeZone !== '' && startTime !== '' && endTime !== '';
+        const { name, type, date, timeZone, endTime, startTime, overlay, overlayId } = step1Data;
+        return name.trim().length >= 3 && type !== '' && date !== '' && timeZone !== '' && startTime !== '' && endTime !== '' && (overlay !== '' || overlayId !== '');
     }, [step1Data]);
 
     const isStep2Valid = useCallback(() => {

@@ -10,6 +10,7 @@ import Loader from '../../components/Loader';
 import ColorPickerModal from '../../components/ColorPickerModal';
 import CustomDropdown from '../../components/CustomDropdown';
 import { wp, hp } from '../../contants/StyleGuide';
+import { icons } from '../../contants/Icons';
 
 // Font options
 const FONT_FAMILIES = [
@@ -25,15 +26,9 @@ const FONT_FAMILIES = [
 const FONT_WEIGHTS = [
     { label: 'Normal', value: 'normal' },
     { label: 'Bold', value: 'bold' },
-    { label: '100', value: '100' },
-    { label: '200', value: '200' },
-    { label: '300', value: '300' },
-    { label: '400', value: '400' },
-    { label: '500', value: '500' },
-    { label: '600', value: '600' },
-    { label: '700', value: '700' },
-    { label: '800', value: '800' },
-    { label: '900', value: '900' },
+    { label: 'Light', value: '300' },
+    { label: 'Medium', value: '500' },
+    { label: 'SemiBold', value: '600' },
 ];
 
 const FONT_SIZES = [
@@ -287,7 +282,10 @@ const CreateEventThirdStep: React.FC = () => {
                             )}
                             <View style={styles.previewCardContent}>
                                 <View style={styles.previewCardRow}>
-                                    <Text style={styles.previewCardIcon}>🎨</Text>
+                                    <Image
+                                        source={icons.third_step_icon}
+                                        style={styles.previewCardIcon}
+                                    />
                                     {step2Data.plan.photosPerGuest === 0 ? (
                                         <Text style={styles.previewCardText}>0 pictures taken</Text>
                                     ) : (
@@ -569,7 +567,8 @@ const styles = StyleSheet.create({
         marginBottom: hp(0.5),
     },
     previewCardIcon: {
-        fontSize: wp(4.5),
+        width: wp(4.5),
+        height: wp(4.5),
         marginRight: wp(2),
     },
     previewCardText: {

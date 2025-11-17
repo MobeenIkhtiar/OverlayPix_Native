@@ -53,6 +53,19 @@ export const proxyOverlayImage = (imageUrl: any): string => {
 };
 
 // Helper to format price to 2 decimals
-export const formatPrice = (value: number) => {
-    return value && value?.toFixed(2);
+export const formatPrice = (value: any) => {
+    if (value == null || value === "") return "";
+
+    const num = Number(value);
+
+    if (isNaN(num)) return ""; // or return value
+
+    const fixed = num.toFixed(2);
+
+    // If decimal part is "00", return only the integer part
+    if (fixed.endsWith(".00")) {
+        return parseInt(fixed).toString();
+    }
+
+    return fixed;
 };

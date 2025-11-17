@@ -13,5 +13,6 @@ export const icons = {
     user: require('../assets/icons/user.png'),
     cashApp: require('../assets/icons/cash-app.png'),
     paypal: require('../assets/icons/paypal.png'),
-    hexagon_check: require('../assets/icons/hexagon_check.png')
+    hexagon_check: require('../assets/icons/hexagon_check.png'),
+    third_step_icon: require('../assets/icons/third-step-icon.png')
 }

@@ -3,7 +3,7 @@ import { Calendar, ChevronDown, ChevronUp, Clock, X } from 'lucide-react-native'
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useCreateEvent } from '../../hooks/useCreateEvent';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import CalendarPicker from 'react-native-calendar-picker';
 import {
     Platform,
     TouchableOpacity,
@@ -181,6 +181,35 @@ const CreateEventScreen: React.FC = () => {
         return next;
     };
 
+    // Helper to check if selected date is today
+    const isSelectedDateToday = () => {
+        if (!eventDate) return false;
+        const today = new Date();
+        const selected = new Date(eventDate);
+        return (
+            today.getFullYear() === selected.getFullYear() &&
+            today.getMonth() === selected.getMonth() &&
+            today.getDate() === selected.getDate()
+        );
+    };
+
+    // Helper to filter out past time slots for today
+    const filterPastTimesForToday = (timeOptions: string[]) => {
+        if (!isSelectedDateToday()) return timeOptions;
+
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+
+        return timeOptions.filter(timeOption => {
+            const [hour, minute] = timeOption.split(':').map(Number);
+            // Only show times that are at least 15 minutes from now
+            const timeInMinutes = hour * 60 + minute;
+            const currentTimeInMinutes = currentHour * 60 + currentMinute + 15; // Add 15 min buffer
+            return timeInMinutes >= currentTimeInMinutes;
+        });
+    };
+
     // When user selects event type
     const handleEventTypeChange = (value: string) => {
         if (value === "other") {
@@ -280,11 +309,18 @@ const CreateEventScreen: React.FC = () => {
 
     // --- Custom logic for disabling start times after end time is manually selected ---
     // If user manually selects end time, restrict start time options to not be after end time (unless end time is before 12:00 PM)
+    // Also filter out past times if today's date is selected
     const getFilteredStartTimeOptions = () => {
-        if (!endTimeManuallySelected || !endTime) return TIME_OPTIONS;
+        let filteredOptions = TIME_OPTIONS;
+
+        // First, filter out past times if today is selected
+        filteredOptions = filterPastTimesForToday(filteredOptions);
+
+        // Then apply existing end time filtering logic
+        if (!endTimeManuallySelected || !endTime) return filteredOptions;
         const [endHour, endMin] = endTime.split(":").map(Number);
-        if (endHour < 12) return TIME_OPTIONS;
-        return TIME_OPTIONS.filter(option => {
+        if (endHour < 12) return filteredOptions;
+        return filteredOptions.filter(option => {
             const [optHour, optMin] = option.split(":").map(Number);
             if (optHour < endHour) return true;
             if (optHour === endHour && optMin < endMin) return true;
@@ -294,14 +330,21 @@ const CreateEventScreen: React.FC = () => {
 
     // --- Custom logic for disabling end times before start time if end time is manually selected ---
     // If user manually selects end time, restrict end time options to only those after start time, unless end time is before 12:00 PM
+    // Also filter out past times if today's date is selected
     const getFilteredEndTimeOptions = () => {
-        if (!startTime) return TIME_OPTIONS;
+        let filteredOptions = TIME_OPTIONS;
+
+        // First, filter out past times if today is selected
+        filteredOptions = filterPastTimesForToday(filteredOptions);
+
+        // Then apply existing start time filtering logic
+        if (!startTime) return filteredOptions;
         if (endTimeManuallySelected) {
             const [endHour] = endTime.split(":").map(Number);
-            if (endHour < 12) return TIME_OPTIONS;
+            if (endHour < 12) return filteredOptions;
         }
         const [startHour, startMin] = startTime.split(":").map(Number);
-        return TIME_OPTIONS.filter(option => {
+        return filteredOptions.filter(option => {
             const [optHour, optMin] = option.split(":").map(Number);
             if (optHour > startHour) return true;
             if (optHour === startHour && optMin > startMin) return true;
@@ -561,7 +604,7 @@ const CreateEventScreen: React.FC = () => {
                                         </View>
                                     </Pressable>
                                 </Modal>
-                                {/* Event Date with React Native DateTimePicker */}
+                                {/* Event Date with react-native-calendar-picker */}
                                 <View>
                                     <Text style={[styles.label, styles.labelWithOpacity]}>
                                         Event Date <Text style={styles.required}>*</Text>
@@ -576,53 +619,50 @@ const CreateEventScreen: React.FC = () => {
                                         </Text>
                                     </TouchableOpacity>
 
-                                    {/* DateTimePicker Modal */}
-                                    {showDatePicker && (
-                                        <DateTimePicker
-                                            value={eventDate || new Date()}
-                                            mode="date"
-                                            textColor='black'
-                                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                            onChange={(event, date) => {
-                                                if (Platform.OS === 'android') {
-                                                    setShowDatePicker(false);
-                                                }
+                                    <Modal
+                                        visible={showDatePicker}
+                                        transparent
+                                        animationType="fade"
+                                        onRequestClose={() => setShowDatePicker(false)}
+                                    >
+                                        <Pressable style={styles.modalOverlay} onPress={() => setShowDatePicker(false)}>
+                                            <View style={styles.calendarModalContent}>
+                                                <CalendarPicker
+                                                    selectedStartDate={eventDate || undefined}
+                                                    minDate={new Date(new Date().setHours(0, 0, 0, 0))}
+                                                    width={wp(90)}
+                                                    onDateChange={(date: Date) => {
+                                                        if (!date) return;
 
-                                                if (event.type === 'set' && date) {
-                                                    // Create dates with time set to midnight for comparison
-                                                    const now = new Date();
-                                                    now.setHours(0, 0, 0, 0);
+                                                        const now = new Date();
+                                                        now.setHours(0, 0, 0, 0);
 
-                                                    const picked = new Date(date);
-                                                    picked.setHours(0, 0, 0, 0);
+                                                        const picked = new Date(date as Date);
+                                                        picked.setHours(0, 0, 0, 0);
 
-                                                    if (picked.getTime() < now.getTime()) {
-                                                        Alert.alert(
-                                                            "Invalid Date",
-                                                            "Please select today or a future date for your event.",
-                                                            [{ text: "OK" }]
-                                                        );
-                                                        return;
-                                                    }
+                                                        if (picked.getTime() < now.getTime()) {
+                                                            Alert.alert(
+                                                                "Invalid Date",
+                                                                "Please select today or a future date for your event.",
+                                                                [{ text: "OK" }]
+                                                            );
+                                                            return;
+                                                        }
 
-                                                    setEventDate(picked);
+                                                        setEventDate(picked);
 
-                                                    // Format date as YYYY-MM-DD
-                                                    const year = picked.getFullYear();
-                                                    const month = String(picked.getMonth() + 1).padStart(2, '0');
-                                                    const day = String(picked.getDate()).padStart(2, '0');
-                                                    const formattedDate = `${year}-${month}-${day}`;
+                                                        const year = picked.getFullYear();
+                                                        const month = String(picked.getMonth() + 1).padStart(2, '0');
+                                                        const day = String(picked.getDate()).padStart(2, '0');
+                                                        const formattedDate = `${year}-${month}-${day}`;
 
-                                                    updateStep1Data({ date: formattedDate });
-                                                }
-
-                                                if (Platform.OS === 'ios') {
-                                                    setShowDatePicker(false);
-                                                }
-                                            }}
-                                            minimumDate={new Date(new Date().setHours(0, 0, 0, 0))}
-                                        />
-                                    )}
+                                                        updateStep1Data({ date: formattedDate });
+                                                        setShowDatePicker(false);
+                                                    }}
+                                                />
+                                            </View>
+                                        </Pressable>
+                                    </Modal>
                                 </View>
                                 {/* Start Time Picker */}
                                 {renderTimePicker({
@@ -757,7 +797,7 @@ const CreateEventScreen: React.FC = () => {
                         >
                             <View style={styles.photoOverlayHeaderRow}>
                                 <View>
-                                    <Text style={styles.photoOverlayHeaderTitle}>Photo Overlay Preview</Text>
+                                    <Text style={styles.photoOverlayHeaderTitle}>Photo Overlay</Text>
                                     <Text style={styles.photoOverlayHeaderSubtitle}>
                                         Customize how your event{'\n'}branding appears on photos
                                     </Text>
@@ -771,7 +811,7 @@ const CreateEventScreen: React.FC = () => {
                             <View style={styles.photoOverlayContent}>
                                 {/* Title & Guidelines */}
                                 <View style={styles.photoOverlayTitleBox}>
-                                    <Text style={styles.photoOverlayTitle}>Photo Overlay Preview</Text>
+                                    <Text style={styles.photoOverlayTitle}>Photo Overlay</Text>
                                     <Text style={styles.photoOverlaySubtitle}>Customize how your event branding appears on photos</Text>
                                     <TouchableOpacity onPress={() => setShowOverlayGuidelines(true)}>
                                         <Text style={styles.photoOverlayGuidelinesLink}>
@@ -1106,9 +1146,22 @@ const styles = StyleSheet.create({
         borderRadius: wp(4),
         padding: wp(4),
         margin: wp(5),
-        maxWidth: wp(90),
+        maxWidth: '90%',
         width: '90%',
         maxHeight: hp(60),
+    },
+    calendarModalContent: {
+        backgroundColor: 'white',
+        borderRadius: wp(4),
+        paddingVertical: hp(2),
+        paddingHorizontal: wp(2),
+        width: '90%',
+        maxWidth: 420,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 6,
     },
     overlayPreview: {
         height: hp(25),

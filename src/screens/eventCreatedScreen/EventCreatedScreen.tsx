@@ -18,26 +18,18 @@ const EventCreatedScreen: React.FC = () => {
     const [eventData, setEventData] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(true);
 
-    const parseDate = (dateValue: { _seconds: number; _nanoseconds?: number } | null | undefined): string => {
-        if (!dateValue || typeof dateValue !== 'object' || typeof dateValue._seconds !== 'number') {
-            return '';
-        }
-        try {
-            const date = new Date(dateValue._seconds * 1000);
-            if (isNaN(date.getTime())) return '';
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: 'America/New_York',
-                timeZoneName: 'short',
-            });
-        } catch {
-            return '';
-        }
+    const parseDate = (
+        dateValue: { _seconds: number; _nanoseconds?: number } | null | undefined
+    ): string => {
+
+        if (!dateValue || typeof dateValue._seconds !== 'number') return '';
+
+        const date = new Date(dateValue._seconds * 1000);
+
+        // Convert to YYYY-MM-DD in UTC (matches API exactly)
+        return date.toISOString().split('T')[0];
     };
+
 
     useEffect(() => {
         const fetchEventData = async () => {
