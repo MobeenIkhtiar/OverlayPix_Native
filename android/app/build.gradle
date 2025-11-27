@@ -28,9 +28,8 @@ android {
         applicationId "com.overlaypixel"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "1.4"
-
+        versionCode 11
+        versionName "1.7"
         // ✅ Keep only English resources
         resConfigs "en"
     }

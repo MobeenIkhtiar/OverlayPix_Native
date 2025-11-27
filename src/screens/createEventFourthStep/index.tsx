@@ -82,10 +82,6 @@ const CreateEventFourthStep: React.FC = () => {
     const [paymentMessageType, setPaymentMessageType] = useState<'success' | 'error' | ''>('');
     const [isPaymentIntent, setISPaymentIntent] = useState<boolean>(false);
 
-    
-
-    console.log('order id paypal=>>>>>>>',step4Data.payment.paypalOrderId)
-
     useEffect(() => {
         // Get params from route
         const upgradeParam = route.params?.upgrade;

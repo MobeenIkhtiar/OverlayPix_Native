@@ -173,8 +173,8 @@ const Login: React.FC = () => {
                 return;
             } else {
                 navigation.replace('dashboard');
-            console.log('token=>>>>>>>>>>>>>>',token)
-            //     navigation.navigate('joinedEvent');
+                   console.log('token=>>>>>>>>>>>>>>',token);
+                // navigation.navigate('joinedEvent');
                 return;
             }
         } catch {

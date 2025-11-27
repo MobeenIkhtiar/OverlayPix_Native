@@ -1032,6 +1032,7 @@ const styles = StyleSheet.create({
         paddingVertical: hp(2),
         fontSize: wp(4.5),
         backgroundColor: 'white',
+        color:'#000'
     },
     select: {
         borderWidth: 1,

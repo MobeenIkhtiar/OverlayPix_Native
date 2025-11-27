@@ -16,12 +16,12 @@ const App = () => {
     configureFacebookSDK();
   }, []);
 
- return (
+  return (
     <>
-      {/* 👇 Add StatusBar here */}
+      {/* StatusBar */}
       <StatusBar
-        backgroundColor="#fff" 
-        barStyle="dark-content" 
+        backgroundColor="#fff"
+        barStyle="dark-content"
       />
 
       <SafeAreaProvider style={styles.container}>
