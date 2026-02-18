@@ -7,6 +7,7 @@ export interface Plan {
     id: string;
     name: string;
     price: number;
+    formattedPrice?: string;
     basePlan?: number;
     guestLimit: number;
     photoPool: number;

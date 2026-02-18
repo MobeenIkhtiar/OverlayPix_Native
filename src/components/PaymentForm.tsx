@@ -10,53 +10,12 @@ import {
     Platform
 } from 'react-native';
 import type { EventPayment } from '../types/createEvent';
-import { CardField, useStripe, PlatformPay } from '@stripe/stripe-react-native';
 import { useCreateEvent } from '../hooks/useCreateEvent';
 import { planService } from '../services/planService';
+import { revenueCatService } from '../services/revenueCatService';
 import { icons } from '../contants/Icons';
 import { wp, hp } from '../contants/StyleGuide';
-
-const getPaymentMethods = (isApplePaySupported: boolean, isGooglePaySupported: boolean) => {
-    const methods = [
-        {
-            label: 'Credit Card',
-            value: 'card',
-            icons: [icons.mastercardLogo, icons.visa],
-        },
-    ];
-
-    if (Platform.OS === 'ios' && isApplePaySupported) {
-        methods.push({
-            label: 'Apple Pay',
-            value: 'applepay',
-            icons: [icons.applePay],
-        });
-    }
-
-    if (Platform.OS === 'android' && isGooglePaySupported) {
-        methods.push({
-            label: 'Google Pay',
-            value: 'googlepay',
-            icons: [icons.googlePay],
-        });
-    }
-
-    // Add Cash App Pay (available on both iOS and Android)
-    methods.push({
-        label: 'Cash App Pay',
-        value: 'cashapp',
-        icons: [icons.cashApp],
-    });
-
-    // Add PayPal (available on both iOS and Android)
-    methods.push({
-        label: 'PayPal',
-        value: 'paypal',
-        icons: [icons.paypal],
-    });
-
-    return methods;
-};
+import { PurchasesPackage } from 'react-native-purchases';
 
 interface PaymentFormProps {
     paymentData?: EventPayment;
@@ -65,8 +24,6 @@ interface PaymentFormProps {
     eventId: string;
     setAppliedDiscountCode: (val: string) => void;
     appliedDiscountCode: string;
-    selected: string;
-    setSelected: (val: string) => void;
     paymentMessage: string;
     paymentMessageType: string;
 }
@@ -76,39 +33,39 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     isUpgradeMode,
     setAppliedDiscountCode,
     appliedDiscountCode,
-    selected,
-    setSelected,
     paymentMessage,
     paymentMessageType
 }) => {
     const [discount, setDiscount] = useState('');
     const [CodeLoading, setCodeLoading] = useState<boolean>(false);
-
     const [discountMessage, setDiscountMessage] = useState('');
     const [discountMessageType, setDiscountMessageType] = useState<'success' | 'error' | ''>('');
-    const [isApplePaySupported, setIsApplePaySupported] = useState(false);
-    const [isGooglePaySupported, setIsGooglePaySupported] = useState(false);
+    const [iapProduct, setIapProduct] = useState<PurchasesPackage | null>(null);
+    const [loadingProduct, setLoadingProduct] = useState(false);
 
     const { step2Data } = useCreateEvent();
-    const { isPlatformPaySupported, confirmPlatformPayPayment } = useStripe();
     const isFreePlan = step2Data?.plan?.finalPrice === 0;
 
-    // Check if Apple Pay or Google Pay is supported
+    // Fetch RevenueCat package when plan changes
     useEffect(() => {
-        const checkPlatformPaySupport = async () => {
+        const fetchRevenueCatPackage = async () => {
+            if (isFreePlan || !step2Data?.plan?.planId) {
+                return;
+            }
+
             try {
-                const isSupported = await isPlatformPaySupported();
-                if (Platform.OS === 'ios') {
-                    setIsApplePaySupported(isSupported);
-                } else if (Platform.OS === 'android') {
-                    setIsGooglePaySupported(isSupported);
-                }
+                setLoadingProduct(true);
+                const pkg = await revenueCatService.getPackageByPlanId(step2Data.plan.planId);
+                setIapProduct(pkg);
             } catch (error) {
-                console.error('Error checking platform pay support:', error);
+                console.error('Error fetching RevenueCat package:', error);
+            } finally {
+                setLoadingProduct(false);
             }
         };
-        checkPlatformPaySupport();
-    }, [isPlatformPaySupported]);
+
+        fetchRevenueCatPackage();
+    }, [step2Data?.plan?.planId, isFreePlan]);
 
     const handleApplyDicountCode = async (discountCode: string) => {
         setCodeLoading(true);
@@ -158,166 +115,88 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         onDiscountUpdate?.(0);
     };
 
+    const platformName = Platform.OS === 'ios' ? 'App Store' : 'Google Play';
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Payment</Text>
             {step2Data?.plan?.finalPrice > 0 && (
-                <Text style={styles.subtitle}>Complete your purchase</Text>
+                <Text style={styles.subtitle}>Complete your purchase via {platformName}</Text>
             )}
 
-            {/* Payment method selection */}
+            {/* IAP Payment Method */}
             {!isFreePlan && (
-                <View style={styles.paymentMethodsContainer}>
-                    {getPaymentMethods(isApplePaySupported, isGooglePaySupported).map((method: any) => {
-                        const isSelected = selected === method.value;
-
-                        return (
-                            <TouchableOpacity
-                                key={method.value}
-                                style={[
-                                    styles.paymentMethodButton,
-                                    isSelected && styles.paymentMethodButtonSelected
-                                ]}
-                                onPress={() => {
-                                    setSelected(method.value);
-                                }}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={styles.paymentMethodLabel}>{method.label}</Text>
-                                <View style={styles.paymentMethodIcons}>
-                                    {method.icons.map((icon: any, i: number) => (
-                                        <Image
-                                            key={i}
-                                            source={icon}
-                                            style={styles.paymentIcon}
-                                            resizeMode="contain"
-                                        />
-                                    ))}
-                                </View>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </View>
-            )}
-
-            {/* Card Payment */}
-            {!isFreePlan && selected === 'card' && (
-                <View style={styles.cardDetailsContainer}>
-                    <Text style={styles.label}>Card Details</Text>
-                    <CardField
-                        postalCodeEnabled={false}
-                        placeholders={{
-                            number: '4242 4242 4242 4242',
-                        }}
-                        cardStyle={{
-                            backgroundColor: '#FFFFFF',
-                            placeholderColor: '#9e9e9e',
-                            textColor: '#333333',
-                            borderColor: '#E6F7FA',
-                            borderWidth: 1,
-                            borderRadius: wp(2),
-                        }}
-                        style={styles.cardField}
-                    />
-                </View>
-            )}
-
-            {/* Apple Pay Payment */}
-            {!isFreePlan && selected === 'applepay' && Platform.OS === 'ios' && (
-                <View style={styles.digitalPaymentContainer}>
-                    <Text style={styles.label}>Apple Pay</Text>
-                    <View style={styles.digitalPaymentBox}>
-                        <View style={styles.digitalPaymentContent}>
+                <View style={styles.iapContainer}>
+                    <Text style={styles.label}>Payment Method</Text>
+                    <View style={styles.iapMethodBox}>
+                        <View style={styles.iapMethodContent}>
                             <Image
-                                source={icons.applePay}
-                                style={styles.digitalPaymentIcon}
+                                source={Platform.OS === 'ios' ? icons.applePay : icons.googlePay}
+                                style={styles.iapIcon}
                                 resizeMode="contain"
                             />
-                            <Text style={styles.digitalPaymentText}>
-                                Pay securely with Apple Pay
-                            </Text>
+                            <View style={styles.iapTextContainer}>
+                                <Text style={styles.iapMethodText}>
+                                    {Platform.OS === 'ios' ? 'App Store' : 'Google Play'}
+                                </Text>
+                                <Text style={styles.iapSubtext}>
+                                    Secure payment through {platformName}
+                                </Text>
+                            </View>
                         </View>
                     </View>
-                    <Text style={styles.digitalPaymentNote}>
-                        You'll be prompted to authenticate with Face ID, Touch ID, or passcode when you complete your purchase.
+
+                    {/* Product Info */}
+                    {loadingProduct ? (
+                        <View style={styles.productLoadingContainer}>
+                            <ActivityIndicator size="small" color="#3DA9B7" />
+                            <Text style={styles.productLoadingText}>Loading product...</Text>
+                        </View>
+                    ) : iapProduct ? (
+                        <View style={styles.productInfoBox}>
+                            <Text style={styles.productName}>{revenueCatService.getProductTitle(iapProduct)}</Text>
+                            <Text style={styles.productPrice}>
+                                {revenueCatService.getFormattedPrice(iapProduct)}
+                            </Text>
+                            {iapProduct.product.description && (
+                                <Text style={styles.productDescription}>
+                                    {revenueCatService.getProductDescription(iapProduct)}
+                                </Text>
+                            )}
+                        </View>
+                    ) : (
+                        <View style={styles.productErrorBox}>
+                            <Text style={styles.productErrorText}>
+                                Product not available. Please try again later.
+                            </Text>
+                        </View>
+                    )}
+
+                    <Text style={styles.iapNote}>
+                        {Platform.OS === 'ios'
+                            ? 'You\'ll be prompted to authenticate with Face ID, Touch ID, or passcode.'
+                            : 'You\'ll be prompted to confirm your payment with Google Play.'}
                     </Text>
                 </View>
             )}
 
-            {/* Google Pay Payment */}
-            {!isFreePlan && selected === 'googlepay' && Platform.OS === 'android' && (
-                <View style={styles.digitalPaymentContainer}>
-                    <Text style={styles.label}>Google Pay</Text>
-                    <View style={styles.digitalPaymentBox}>
-                        <View style={styles.digitalPaymentContent}>
-                            <Image
-                                source={icons.googlePay}
-                                style={styles.digitalPaymentIcon}
-                                resizeMode="contain"
-                            />
-                            <Text style={styles.digitalPaymentText}>
-                                Pay securely with Google Pay
-                            </Text>
-                        </View>
-                    </View>
-                    <Text style={styles.digitalPaymentNote}>
-                        You'll be prompted to confirm your payment with Google Pay when you complete your purchase.
-                    </Text>
-                </View>
-            )}
-
-            {/* Cash App Pay Payment */}
-            {!isFreePlan && selected === 'cashapp' && (
-                <View style={styles.digitalPaymentContainer}>
-                    <Text style={styles.label}>Cash App Pay</Text>
-                    <View style={styles.digitalPaymentBox}>
-                        <View style={styles.digitalPaymentContent}>
-                            <Image
-                                source={icons.cashApp}
-                                style={styles.digitalPaymentIcon}
-                                resizeMode="contain"
-                            />
-                            <Text style={styles.digitalPaymentText}>
-                                Pay securely with Cash App
-                            </Text>
-                        </View>
-                    </View>
-                    <Text style={styles.digitalPaymentNote}>
-                        You'll be redirected to Cash App to complete your payment securely.
-                    </Text>
-                </View>
-            )}
-
-            {/* PayPal Payment */}
-            {!isFreePlan && selected === 'paypal' && (
-                <View style={styles.digitalPaymentContainer}>
-                    <Text style={styles.label}>PayPal</Text>
-                    <View style={styles.digitalPaymentBox}>
-                        <View style={styles.digitalPaymentContent}>
-                            <Image
-                                source={icons.paypal}
-                                style={styles.digitalPaymentIcon}
-                                resizeMode="contain"
-                            />
-                            <Text style={styles.digitalPaymentText}>
-                                Pay securely with PayPal
-                            </Text>
-                        </View>
-                    </View>
-                    <Text style={styles.digitalPaymentNote}>
-                        You'll be redirected to PayPal to complete your payment securely.
+            {/* Free Plan Message */}
+            {isFreePlan && (
+                <View style={styles.freePlanBox}>
+                    <Text style={styles.freePlanText}>
+                        ✨ This is a free plan - no payment required!
                     </Text>
                 </View>
             )}
 
             {/* Discount Code */}
-            {step2Data?.plan?.finalPrice > 0 && !isUpgradeMode && (
+            {/* {step2Data?.plan?.finalPrice > 0 && !isUpgradeMode && (
                 <View style={styles.discountContainer}>
                     <Text style={styles.label}>Discount Code</Text>
                     <View style={styles.discountInputRow}>
                         <TextInput
                             style={styles.discountInput}
-                            placeholder="234151-afs"
+                            placeholder="Enter discount code"
                             placeholderTextColor="#999999"
                             value={discount}
                             onChangeText={setDiscount}
@@ -358,7 +237,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         </Text>
                     )}
                 </View>
-            )}
+            )} */}
 
             {paymentMessage && (
                 <Text style={[
@@ -390,43 +269,7 @@ const styles = StyleSheet.create({
         textAlign: 'left',
         marginBottom: hp(2),
     },
-    paymentMethodsContainer: {
-        gap: hp(1),
-        marginBottom: hp(2),
-    },
-    paymentMethodButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: wp(4),
-        paddingVertical: hp(1.5),
-        borderRadius: wp(2),
-        borderWidth: 1,
-        borderColor: '#CCCCCC',
-        backgroundColor: '#FFFFFF',
-    },
-    paymentMethodButtonSelected: {
-        backgroundColor: '#EFF8F9',
-        borderColor: '#86C9D2',
-    },
-    paymentMethodButtonDisabled: {
-        opacity: 0.5,
-    },
-    paymentMethodLabel: {
-        fontWeight: '500',
-        fontSize: wp(3),
-        color: '#626B6C',
-    },
-    paymentMethodIcons: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: wp(2),
-    },
-    paymentIcon: {
-        height: hp(2),
-        width: wp(8),
-    },
-    cardDetailsContainer: {
+    iapContainer: {
         gap: hp(1.5),
         marginTop: hp(1),
     },
@@ -436,66 +279,101 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         textAlign: 'left',
     },
-    cardField: {
-        width: '100%',
-        height: hp(6),
-        marginVertical: hp(1),
+    iapMethodBox: {
+        borderWidth: 1,
+        borderColor: '#86C9D2',
+        borderRadius: wp(2),
+        paddingHorizontal: wp(4),
+        paddingVertical: hp(2),
+        backgroundColor: '#EFF8F9',
     },
-    placeholderText: {
-        fontSize: wp(3.5),
+    iapMethodContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    iapIcon: {
+        height: hp(4),
+        width: wp(12),
+        marginRight: wp(3),
+    },
+    iapTextContainer: {
+        flex: 1,
+    },
+    iapMethodText: {
+        fontSize: wp(4),
+        color: '#333333',
+        fontWeight: '600',
+    },
+    iapSubtext: {
+        fontSize: wp(3),
+        color: '#666666',
+        marginTop: hp(0.3),
+    },
+    iapNote: {
+        fontSize: wp(3),
         color: '#999999',
-        textAlign: 'center',
+        marginTop: hp(0.5),
+        lineHeight: wp(4.5),
     },
-    digitalPaymentContainer: {
-        gap: hp(1.5),
-        marginTop: hp(1),
+    productLoadingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: hp(2),
+        gap: wp(2),
     },
-    digitalPaymentBox: {
+    productLoadingText: {
+        fontSize: wp(3.5),
+        color: '#666666',
+    },
+    productInfoBox: {
         borderWidth: 1,
         borderColor: '#E6F7FA',
         borderRadius: wp(2),
-        paddingHorizontal: wp(3),
-        paddingVertical: hp(2),
-        minHeight: hp(6),
-        backgroundColor: '#F9F9F9',
+        padding: wp(3),
+        backgroundColor: '#F9FEFF',
     },
-    digitalPaymentContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: hp(5),
-    },
-    digitalPaymentIcon: {
-        height: hp(4),
-        width: wp(12),
-        marginRight: wp(2),
-    },
-    digitalPaymentText: {
+    productName: {
         fontSize: wp(3.5),
-        color: '#666666',
+        color: '#333333',
         fontWeight: '500',
     },
-    digitalPaymentNote: {
+    productPrice: {
+        fontSize: wp(5),
+        color: '#3DA9B7',
+        fontWeight: 'bold',
+        marginTop: hp(0.5),
+    },
+    productDescription: {
         fontSize: wp(3),
-        color: '#999999',
-        marginTop: hp(1),
-        lineHeight: wp(4.5),
-    },
-    loadingContainer: {
-        marginTop: hp(2),
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: hp(6),
-        borderWidth: 1,
-        borderColor: '#E6E6E6',
-        borderRadius: wp(2),
-        backgroundColor: '#F5F5F5',
-        gap: wp(2),
-    },
-    loadingText: {
-        fontSize: wp(3.5),
         color: '#666666',
+        marginTop: hp(0.5),
+    },
+    productErrorBox: {
+        borderWidth: 1,
+        borderColor: '#FFCCCC',
+        borderRadius: wp(2),
+        padding: wp(3),
+        backgroundColor: '#FFF5F5',
+    },
+    productErrorText: {
+        fontSize: wp(3.5),
+        color: '#EF4444',
+        textAlign: 'center',
+    },
+    freePlanBox: {
+        borderWidth: 1,
+        borderColor: '#86C9D2',
+        borderRadius: wp(2),
+        padding: wp(4),
+        backgroundColor: '#EFF8F9',
+        marginTop: hp(2),
+    },
+    freePlanText: {
+        fontSize: wp(4),
+        color: '#3DA9B7',
+        fontWeight: '600',
+        textAlign: 'center',
     },
     discountContainer: {
         marginTop: hp(2),

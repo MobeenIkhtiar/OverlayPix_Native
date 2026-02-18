@@ -22,6 +22,8 @@ const CreateEventSecondStep: React.FC = () => {
     const [guestPhotosOpen, setGuestPhotosOpen] = useState<boolean>(false);
     const [isEditMode, setIsEditMode] = useState<boolean>(false);
     const [plans, setPlans] = useState<Plan[]>([]);
+    const [addOnPlans, setAddOnPlans] = useState<Plan[]>([]);
+    const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
@@ -49,13 +51,19 @@ const CreateEventSecondStep: React.FC = () => {
                 setError(null);
                 const fetchedPlans = await planService.getPlans();
 
-                // Sort plans by price ascending before setting state
-                const sortedPlans = [...fetchedPlans].sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
-                setPlans(sortedPlans);
+                const filteredBasePlans = fetchedPlans.filter(p => p.id !== 'add_guest_5' && p.id !== 'add_photos_10');
+                const filteredAddOnPlans = fetchedPlans.filter(p => p.id === 'add_guest_5' || p.id === 'add_photos_10');
 
-                // Set default plan if no plan is selected
+                // Sort plans by price ascending before setting state
+                const sortedPlans = [...filteredBasePlans].sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+                setPlans(sortedPlans);
+                setAddOnPlans(filteredAddOnPlans);
+
                 if (!step2Data.plan.planId && sortedPlans.length > 0) {
-                    const defaultPlan = sortedPlans.find(plan => plan.name.toLowerCase().includes('free')) || sortedPlans[0];
+                    // Default to Starter Event, then Free, then cheapest
+                    const defaultPlan = sortedPlans.find(plan => plan.id === 'starter_event' || plan.name.toLowerCase().includes('starter'))
+                        || sortedPlans.find(plan => plan.name.toLowerCase().includes('free'))
+                        || sortedPlans[0];
                     setSelectedPlan(defaultPlan);
 
                     // Set selected storage to the first storage option of the default plan
@@ -75,7 +83,7 @@ const CreateEventSecondStep: React.FC = () => {
                             canSharePhotos: false,
                             canDownload: false
                         }
-                    });
+                    }, defaultPlan); // Pass defaultPlan so prices are calculated correctly
                 } else if (step2Data.plan.planId) {
                     // If we have a plan ID, find and set the selected plan
                     const currentPlan = sortedPlans.find(plan => plan.id === step2Data.plan.planId);
@@ -85,6 +93,10 @@ const CreateEventSecondStep: React.FC = () => {
                         // Set selected storage to the first storage option of the current plan
                         if (currentPlan.storageOptions && currentPlan.storageOptions.length > 0) {
                             setSelectedStorage(currentPlan.storageOptions[0]);
+                        }
+
+                        if (!step2Data.plan.planName) {
+                            updatePlanData({ planName: currentPlan.name }, currentPlan);
                         }
                     }
                 }
@@ -115,25 +127,50 @@ const CreateEventSecondStep: React.FC = () => {
         const guestLimitPrice = calculateGuestLimitPrice();
         const photoPoolPrice = calculatePhotoPoolPrice();
         const storageDurationPrice = calculateStorageDurationPrice();
+        const addOnsPrice = calculateAddOnsPrice();
 
         // Always include base plan price with proper decimal handling
-        const totalPrice = (selectedPlan.price || 0) + guestLimitPrice + photoPoolPrice + storageDurationPrice;
+        const totalPrice = (selectedPlan.price || 0) + guestLimitPrice + photoPoolPrice + storageDurationPrice + addOnsPrice;
 
         return {
             guestLimitPrice: Number(guestLimitPrice.toFixed(2)),
             photoPoolPrice: Number(photoPoolPrice.toFixed(2)),
             storageDaysPrice: Number(storageDurationPrice.toFixed(2)),
+            addOnsPrice: Number(addOnsPrice.toFixed(2)),
             finalPrice: Number(totalPrice.toFixed(2))
         };
-    }, [selectedPlan, step2Data.plan.guestLimit, step2Data.plan.photoPool, step2Data.plan.storageDays]);
+    }, [selectedPlan, step2Data.plan.guestLimit, step2Data.plan.photoPool, step2Data.plan.storageDays, selectedAddonIds]); // Added selectedAddonIds dependency
+
+    // Helper to get total capacity from add-ons
+    const getAddonCapacity = (addonIds: string[]) => {
+        let guestLimit = 0;
+        let photoPool = 0;
+        addonIds.forEach(id => {
+            const addon = addOnPlans.find(p => p.id === id);
+            if (addon) {
+                if (addon.id === 'add_guest_5') guestLimit += 5;
+                else if (addon.id === 'add_photos_10') photoPool += 10;
+                // Fallback
+                else {
+                    guestLimit += (addon.guestLimit || 0);
+                    photoPool += (addon.photoPool || 0);
+                }
+            }
+        });
+        return { guestLimit, photoPool };
+    };
 
     // FIXED: Calculate guest limit price with proper precision
     const calculateGuestLimitPrice = (): number => {
         if (!selectedPlan) return 0;
         const base = selectedPlan.guestLimit || 1;
         const pricePerGuest = selectedPlan.guestLimitIncreasePricePerGuest || 0;
-        const extra = Math.max(0, step2Data.plan.guestLimit - base);
-        
+
+        const { guestLimit: addonGuests } = getAddonCapacity(selectedAddonIds);
+
+        // Subtract add-on guests from total before checking against base
+        const extra = Math.max(0, step2Data.plan.guestLimit - addonGuests - base);
+
         // Use proper decimal arithmetic to avoid floating point issues
         const calculatedPrice = extra * pricePerGuest;
         return Number(calculatedPrice.toFixed(2));
@@ -144,8 +181,11 @@ const CreateEventSecondStep: React.FC = () => {
         if (!selectedPlan) return 0;
         const base = selectedPlan.photoPool || 1;
         const pricePerPhoto = selectedPlan.photoPoolLimitIncreasePricePerPhoto || 0;
-        const extra = Math.max(0, step2Data.plan.photoPool - base);
-        
+
+        const { photoPool: addonPhotos } = getAddonCapacity(selectedAddonIds);
+
+        const extra = Math.max(0, step2Data.plan.photoPool - addonPhotos - base);
+
         // Use proper decimal arithmetic to avoid floating point issues
         const calculatedPrice = extra * pricePerPhoto;
         return Number(calculatedPrice.toFixed(2));
@@ -159,22 +199,80 @@ const CreateEventSecondStep: React.FC = () => {
         return currentOption.price || 0;
     };
 
+    // New: Calculate total price of selected add-ons
+    const calculateAddOnsPrice = (): number => {
+        let total = 0;
+        selectedAddonIds.forEach(id => {
+            const addon = addOnPlans.find(p => p.id === id);
+            if (addon) {
+                total += (addon.price || 0);
+            }
+        });
+        return total;
+    };
+
+    // Helper functions that accept plan data and plan as parameters
+    const calculateGuestLimitPriceWithData = (planData: typeof step2Data.plan, plan: Plan, addonIds: string[]): number => {
+        if (!plan) return 0;
+        const base = plan.guestLimit || 1;
+        const pricePerGuest = plan.guestLimitIncreasePricePerGuest || 0;
+
+        const { guestLimit: addonGuests } = getAddonCapacity(addonIds);
+
+        const extra = Math.max(0, planData.guestLimit - addonGuests - base);
+        const calculatedPrice = extra * pricePerGuest;
+        return Number(calculatedPrice.toFixed(2));
+    };
+
+    const calculatePhotoPoolPriceWithData = (planData: typeof step2Data.plan, plan: Plan, addonIds: string[]): number => {
+        if (!plan) return 0;
+        const base = plan.photoPool || 1;
+        const pricePerPhoto = plan.photoPoolLimitIncreasePricePerPhoto || 0;
+
+        const { photoPool: addonPhotos } = getAddonCapacity(addonIds);
+
+        const extra = Math.max(0, planData.photoPool - addonPhotos - base);
+        const calculatedPrice = extra * pricePerPhoto;
+        return Number(calculatedPrice.toFixed(2));
+    };
+
+    const calculateStorageDurationPriceWithData = (planData: typeof step2Data.plan, plan: Plan): number => {
+        if (!plan?.storageOptions) return 0;
+        const currentOption = plan.storageOptions.find(option => option.days === planData.storageDays);
+        if (!currentOption) return 0;
+        return currentOption.price || 0;
+    };
+
     // Update context when local state changes
-    const updatePlanData = (updates: Partial<typeof step2Data.plan>) => {
+    // planOverride is used when selectedPlan state hasn't updated yet (e.g., in handlePlanSelect)
+    const updatePlanData = (updates: Partial<typeof step2Data.plan>, planOverride?: Plan) => {
+        const activePlan = planOverride || selectedPlan;
+
         const newPlanData = {
             ...step2Data.plan,
-            ...updates
+            ...updates,
+            planName: activePlan?.name || step2Data.plan.planName
         };
 
-        // FIXED: Always recalculate prices after any update
-        if (selectedPlan) {
-            const prices = calculatePrices();
-            if (prices) {
-                newPlanData.finalPrice = prices.finalPrice;
-                newPlanData.guestLimitPrice = prices.guestLimitPrice;
-                newPlanData.photoPoolPrice = prices.photoPoolPrice;
-                newPlanData.storageDaysPrice = prices.storageDaysPrice;
-            }
+        // Calculate prices using the NEW merged data and the active plan
+        if (activePlan) {
+            const guestLimitPrice = calculateGuestLimitPriceWithData(newPlanData, activePlan, selectedAddonIds);
+            const photoPoolPrice = calculatePhotoPoolPriceWithData(newPlanData, activePlan, selectedAddonIds);
+            const storageDurationPrice = calculateStorageDurationPriceWithData(newPlanData, activePlan);
+
+            // Calculate add-on price (using current state of selectedAddonIds)
+            let addOnsPrice = 0;
+            selectedAddonIds.forEach(id => {
+                const addon = addOnPlans.find(p => p.id === id);
+                if (addon) addOnsPrice += (addon.price || 0);
+            });
+
+            const totalPrice = (activePlan.price || 0) + guestLimitPrice + photoPoolPrice + storageDurationPrice + addOnsPrice;
+
+            newPlanData.finalPrice = Number(totalPrice.toFixed(2));
+            newPlanData.guestLimitPrice = Number(guestLimitPrice.toFixed(2));
+            newPlanData.photoPoolPrice = Number(photoPoolPrice.toFixed(2));
+            newPlanData.storageDaysPrice = Number(storageDurationPrice.toFixed(2));
         }
 
         updateStep2Data({
@@ -185,8 +283,11 @@ const CreateEventSecondStep: React.FC = () => {
     // Handle plan selection
     const handlePlanSelect = (plan: Plan) => {
         setSelectedPlan(plan);
-        
-        const newPlanData = {
+        // Reset add-ons when changing base plan
+        setSelectedAddonIds([]);
+
+        // Use updatePlanData with plan override to ensure prices are calculated correctly
+        updatePlanData({
             planId: plan.id,
             basePlan: plan.price,
             guestLimit: plan.guestLimit,
@@ -198,27 +299,70 @@ const CreateEventSecondStep: React.FC = () => {
                 canSharePhotos: false,
                 canDownload: false
             }
-        };
-
-        // FIXED: Calculate prices immediately after plan selection
-        const guestLimitPrice = 0; // No extra guests initially
-        const photoPoolPrice = 0; // No extra photos initially
-        const storageDurationPrice = calculateStorageDurationPrice();
-        const totalPrice = (plan.price || 0) + guestLimitPrice + photoPoolPrice + storageDurationPrice;
-
-        updateStep2Data({
-            plan: {
-                ...newPlanData,
-                finalPrice: Number(totalPrice.toFixed(2)),
-                guestLimitPrice: Number(guestLimitPrice.toFixed(2)),
-                photoPoolPrice: Number(photoPoolPrice.toFixed(2)),
-                storageDaysPrice: Number(storageDurationPrice.toFixed(2)),
-            }
-        });
+        }, plan); // Pass plan as override since selectedPlan state hasn't updated yet
 
         // Set selected storage to the first storage option of the new plan
         if (plan.storageOptions && plan.storageOptions.length > 0) {
             setSelectedStorage(plan.storageOptions[0]);
+        }
+    };
+
+    const handleAddonToggle = (addon: Plan) => {
+        let newSelectedIds = [...selectedAddonIds];
+        const isSelected = newSelectedIds.includes(addon.id);
+
+        let guestLimitChange = 0;
+        let photoPoolChange = 0;
+
+        // Determine the impact of this add-on
+        if (addon.id === 'add_guest_5') {
+            guestLimitChange = 5;
+        } else if (addon.id === 'add_photos_10') {
+            photoPoolChange = 10;
+        } else {
+            guestLimitChange = addon.guestLimit || 0;
+            photoPoolChange = addon.photoPool || 0;
+        }
+
+        if (isSelected) {
+            // Remove
+            newSelectedIds = newSelectedIds.filter(id => id !== addon.id);
+            guestLimitChange = -guestLimitChange;
+            photoPoolChange = -photoPoolChange;
+        } else {
+            // Add
+            newSelectedIds.push(addon.id);
+        }
+
+        setSelectedAddonIds(newSelectedIds);
+
+        // Update limits
+        const newGuestLimit = step2Data.plan.guestLimit + guestLimitChange;
+        const newPhotoPool = step2Data.plan.photoPool + photoPoolChange;
+
+        let totalAddonsPrice = 0;
+        newSelectedIds.forEach(id => {
+            const a = addOnPlans.find(p => p.id === id);
+            if (a) totalAddonsPrice += (a.price || 0);
+        });
+
+        if (selectedPlan) {
+            const guestLimitPrice = calculateGuestLimitPriceWithData({ ...step2Data.plan, guestLimit: newGuestLimit }, selectedPlan, newSelectedIds);
+            const photoPoolPrice = calculatePhotoPoolPriceWithData({ ...step2Data.plan, photoPool: newPhotoPool }, selectedPlan, newSelectedIds);
+            const storageDurationPrice = calculateStorageDurationPriceWithData(step2Data.plan, selectedPlan);
+
+            const totalPrice = (selectedPlan.price || 0) + guestLimitPrice + photoPoolPrice + storageDurationPrice + totalAddonsPrice;
+
+            updateStep2Data({
+                plan: {
+                    ...step2Data.plan,
+                    guestLimit: newGuestLimit,
+                    photoPool: newPhotoPool,
+                    finalPrice: Number(totalPrice.toFixed(2)),
+                    guestLimitPrice: Number(guestLimitPrice.toFixed(2)),
+                    photoPoolPrice: Number(photoPoolPrice.toFixed(2)),
+                }
+            });
         }
     };
 
@@ -272,7 +416,9 @@ const CreateEventSecondStep: React.FC = () => {
         }
 
         // Price is now a number, so we can directly use it
-        return currentOption.price === 0 ? '$0' : `$${currentOption.price}`;
+        // We try to extract the currency symbol from the selected plan if possible, else default to $
+        const currencySymbol = selectedPlan?.formattedPrice ? selectedPlan.formattedPrice.replace(/[\d.,\s]+/g, '') : '$';
+        return currentOption.price === 0 ? `${currencySymbol}0` : `${currencySymbol}${currentOption.price}`;
     };
 
     // Show loader while loading plans
@@ -308,7 +454,7 @@ const CreateEventSecondStep: React.FC = () => {
                         <View style={styles.dropdownHeaderContent}>
                             <View>
                                 <Text style={styles.dropdownTitle}>Plans</Text>
-                                <Text style={styles.dropdownSubtitle}>Choose a base plan and adjust limits</Text>
+                                <Text style={styles.dropdownSubtitle}>Choose a plan for your event</Text>
                             </View>
                             {plansOpen ? (
                                 <ChevronUp width={wp(6)} height={wp(6)} color="#636565" />
@@ -320,7 +466,7 @@ const CreateEventSecondStep: React.FC = () => {
                     {plansOpen && (
                         <View style={styles.plansContent}>
                             <Text style={styles.sectionTitle}>Plans</Text>
-                            <Text style={styles.sectionSubtitle}>Choose a base plan and adjust limits</Text>
+                            <Text style={styles.sectionSubtitle}>Choose a plan for your event</Text>
 
                             {error && (
                                 <View style={styles.errorContainer}>
@@ -377,8 +523,52 @@ const CreateEventSecondStep: React.FC = () => {
                         </View>
                     )}
 
+                    {/* Add-ons Section */}
+                    {/* {addOnPlans.length > 0 && (
+                        <>
+                            <View style={styles.dropdownHeader}>
+                                <View style={styles.dropdownHeaderContent}>
+                                    <View>
+                                        <Text style={styles.dropdownTitle}>Add-ons</Text>
+                                        <Text style={styles.dropdownSubtitle}>Enhance your plan with extras</Text>
+                                    </View>
+                                </View>
+                            </View>
+                            <View style={styles.plansContent}>
+                                <View style={styles.plansGrid}>
+                                    {chunkPlans(addOnPlans, 2).map((planRow, rowIdx) => (
+                                        <View key={rowIdx} style={styles.planRow}>
+                                            {planRow.map((addon, index) => {
+                                                const isSelected = selectedAddonIds.includes(addon.id);
+                                                return (
+                                                    <TouchableOpacity
+                                                        key={`${addon.id}-${index}`}
+                                                        style={[
+                                                            styles.addonCard,
+                                                            isSelected && styles.addonCardSelected
+                                                        ]}
+                                                        onPress={() => handleAddonToggle(addon)}
+                                                        activeOpacity={0.7}
+                                                    >
+                                                        <Text style={styles.addonTitle}>{addon.name || (addon.id === 'add_guest_5' ? 'Add 5 Guests' : 'Add 10 Photos')}</Text>
+                                                        <Text style={styles.addonPrice}>+ {addon.formattedPrice || `$${formatPrice(addon.price || 0)}`}</Text>
+                                                        {isSelected && (
+                                                            <View style={styles.selectedBadge}>
+                                                                <Text style={styles.selectedBadgeText}>Added</Text>
+                                                            </View>
+                                                        )}
+                                                    </TouchableOpacity>
+                                                );
+                                            })}
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        </>
+                    )} */}
+
                     {/* guest photos dropdown */}
-                    <TouchableOpacity
+                    {/* <TouchableOpacity
                         style={[styles.dropdownHeader, guestPhotosOpen ? styles.dropdownHeaderOpen : styles.dropdownHeaderClosed]}
                         onPress={() => setGuestPhotosOpen((v) => !v)}
                         activeOpacity={0.7}
@@ -394,19 +584,23 @@ const CreateEventSecondStep: React.FC = () => {
                                 <ChevronDown width={wp(6)} height={wp(6)} color="#636565" />
                             )}
                         </View>
-                    </TouchableOpacity>
-                    {guestPhotosOpen && (
-                        <View style={styles.guestPhotosContent}>
-                            {/* Guest Limit & Shared Photo Pool */}
-                            <View style={styles.countersRow}>
-                                <View style={styles.counterContainer}>
-                                    <View style={styles.counterHeader}>
+                    </TouchableOpacity> */}
+
+                    {/* {guestPhotosOpen && (
+                        <View style={styles.guestPhotosContent}> */}
+                    {/* Guest Limit & Shared Photo Pool */}
+
+                    {/* <View style={styles.countersRow}>
+                                <View style={styles.counterContainer}> */}
+
+
+                    {/* <View style={styles.counterHeader}>
                                         <Text style={styles.counterLabel}>Guest Limit</Text>
                                         <Text style={styles.counterPrice}>
                                             ${formatPrice(step2Data.plan.guestLimitPrice || 0)}
                                         </Text>
-                                    </View>
-                                    <View style={styles.counterControls}>
+                                    </View> */}
+                    {/*     <View style={styles.counterControls}>
                                         <TouchableOpacity
                                             style={[
                                                 styles.counterButton,
@@ -432,15 +626,18 @@ const CreateEventSecondStep: React.FC = () => {
                                             <Text style={[styles.counterButtonText, styles.counterButtonTextIncrement]}>+</Text>
                                         </TouchableOpacity>
                                     </View>
-                                </View>
-                                <View style={styles.counterContainer}>
-                                    <View style={styles.counterHeader}>
+                               */}
+                    {/* </View>
+                                <View style={styles.counterContainer}> */}
+
+
+                    {/* <View style={styles.counterHeader}>
                                         <Text style={styles.counterLabel}>Shared Photo Pool</Text>
                                         <Text style={styles.counterPrice}>
                                             ${formatPrice(step2Data.plan.photoPoolPrice || 0)}
                                         </Text>
-                                    </View>
-                                    <View style={styles.counterControls}>
+                                    </View> */}
+                    {/* <View style={styles.counterControls}>
                                         <TouchableOpacity
                                             style={[
                                                 styles.counterButton,
@@ -465,11 +662,13 @@ const CreateEventSecondStep: React.FC = () => {
                                         >
                                             <Text style={[styles.counterButtonText, styles.counterButtonTextIncrement]}>+</Text>
                                         </TouchableOpacity>
-                                    </View>
-                                </View>
-                            </View>
+                                    </View> */}
 
-                            <View style={styles.photoLimitToggleContainer}>
+
+                    {/* </View>
+                            </View> */}
+
+                    {/* <View style={styles.photoLimitToggleContainer}>
                                 <View style={styles.photoLimitToggleTextContainer}>
                                     <Text style={styles.toggleLabel}>Limit Photos Per Guest?</Text>
                                     <Text style={styles.toggleSubLabel}>Set a maximum upload limit per individual guest</Text>
@@ -490,9 +689,9 @@ const CreateEventSecondStep: React.FC = () => {
                                         }
                                     }}
                                 />
-                            </View>
-                            {/* Photos Per Guest Input */}
-                            {showPhotoPerguest && (
+                            </View> */}
+                    {/* Photos Per Guest Input */}
+                    {/* {showPhotoPerguest && (
                                 <View style={styles.photosPerGuestSection}>
                                     <Text style={styles.photosPerGuestLabel}>Photos Per Guest</Text>
                                     {(() => {
@@ -530,7 +729,6 @@ const CreateEventSecondStep: React.FC = () => {
                                                         <Text style={[styles.photosPerGuestButtonText, styles.photosPerGuestButtonTextIncrement]}>+</Text>
                                                     </TouchableOpacity>
                                                 </View>
-                                                {/* Error message for photosPerGuest > photoPool */}
                                                 {photosPerGuestError && (
                                                     <Text style={styles.photosPerGuestError}>
                                                         {photosPerGuestError}
@@ -543,15 +741,20 @@ const CreateEventSecondStep: React.FC = () => {
                                         );
                                     })()}
                                 </View>
-                            )}
-                            {/* Storage Duration */}
-                            <View style={styles.storageDurationHeader}>
+                            )} */}
+                    {/* Storage Duration */}
+                    {/* <View style={styles.storageDurationHeader}>
                                 <View>
                                     <Text style={styles.storageDurationTitle}>Storage Duration</Text>
                                     <Text style={styles.storageDurationSubtitle}>How long photos are stored</Text>
                                 </View>
                                 <Text style={styles.storageDurationPrice}>
-                                    {`$${step2Data.plan.storageDaysPrice !== undefined ? formatPrice(step2Data.plan.storageDaysPrice) : selectedStorage?.price}`}
+                                    {(() => {
+                                        const currencySymbol = selectedPlan?.formattedPrice ? selectedPlan.formattedPrice.replace(/[\d.,\s]+/g, '') : '$';
+                                        return step2Data.plan.storageDaysPrice !== undefined
+                                            ? `${currencySymbol}${formatPrice(step2Data.plan.storageDaysPrice)}`
+                                            : (selectedStorage?.price !== undefined ? `${currencySymbol}${selectedStorage.price}` : `${currencySymbol}0`);
+                                    })()}
                                 </Text>
                             </View>
                             <DaySelection
@@ -564,22 +767,34 @@ const CreateEventSecondStep: React.FC = () => {
                                 isEditMode={isEditMode}
                             />
                         </View>
-                    )}
+                    )} */}
 
                 </View>
 
-                {/* Plan Details Card */}
                 <View style={styles.planDetailsContainer}>
                     <PlanDetailsCardSecondStep
                         totalPhotoPool={step2Data.plan.photoPool}
                         guestLimit={step2Data.plan.guestLimit}
                         maxPerGuest={step2Data.plan.photosPerGuest}
-                        basePlan={`$${formatPrice(selectedPlan?.price || 0)}`}
+                        basePlan={selectedPlan?.formattedPrice || `$${formatPrice(selectedPlan?.price || 0)}`}
+                        planName={selectedPlan?.name || ''}
                         photoStorageDuration={getCurrentStorageOptionPrice()}
-                        guestLimitPrice={`$${formatPrice(step2Data.plan.guestLimitPrice || 0)}`}
-                        photoPoolPrice={`$${formatPrice(step2Data.plan.photoPoolPrice || 0)}`}
-                        photosPerGuestPrice={`$${formatPrice(step2Data.plan.photosPerGuest > 0 ? 10 : 0)}`}
-                        totalAmount={`$${formatPrice(step2Data.plan.finalPrice)}`}
+                        guestLimitPrice={(() => {
+                            const currencySymbol = selectedPlan?.formattedPrice ? selectedPlan.formattedPrice.replace(/[\d.,\s]+/g, '') : '$';
+                            return `${currencySymbol}${formatPrice(step2Data.plan.guestLimitPrice || 0)}`;
+                        })()}
+                        photoPoolPrice={(() => {
+                            const currencySymbol = selectedPlan?.formattedPrice ? selectedPlan.formattedPrice.replace(/[\d.,\s]+/g, '') : '$';
+                            return `${currencySymbol}${formatPrice(step2Data.plan.photoPoolPrice || 0)}`;
+                        })()}
+                        photosPerGuestPrice={(() => {
+                            const currencySymbol = selectedPlan?.formattedPrice ? selectedPlan.formattedPrice.replace(/[\d.,\s]+/g, '') : '$';
+                            return `${currencySymbol}${formatPrice(step2Data.plan.photosPerGuest > 0 ? 10 : 0)}`;
+                        })()}
+                        totalAmount={(() => {
+                            const currencySymbol = selectedPlan?.formattedPrice ? selectedPlan.formattedPrice.replace(/[\d.,\s]+/g, '') : '$';
+                            return `${currencySymbol}${formatPrice(step2Data.plan.finalPrice)}`;
+                        })()}
                         isEditMode={isEditMode}
                         editParam={editParam}
                     />
@@ -593,7 +808,12 @@ const CreateEventSecondStep: React.FC = () => {
             <View style={styles.fixedBottom}>
                 <View style={styles.totalAmountContainer}>
                     <Text style={styles.totalAmountLabel}>Total Amount</Text>
-                    <Text style={styles.totalAmountValue}>${formatPrice(step2Data.plan.finalPrice)}</Text>
+                    <Text style={styles.totalAmountValue}>
+                        {(() => {
+                            const currencySymbol = selectedPlan?.formattedPrice ? selectedPlan.formattedPrice.replace(/[\d.,\s]+/g, '') : '$';
+                            return `${currencySymbol}${formatPrice(step2Data.plan.finalPrice)}`;
+                        })()}
+                    </Text>
                 </View>
             </View>
         </SafeAreaView>
@@ -622,17 +842,49 @@ const styles = StyleSheet.create({
     },
     mainCard: {
         backgroundColor: '#FFFFFF',
-        paddingHorizontal: wp(4),
-        paddingVertical: hp(2),
-        borderRadius: wp(2.5),
-        width: '100%',
-        marginHorizontal: 'auto',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
         marginBottom: hp(1),
+    },
+    addonCard: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: wp(2),
+        padding: wp(3),
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    addonCardSelected: {
+        borderColor: '#3DA9B7',
+        backgroundColor: '#F0FDFA',
+    },
+    addonTitle: {
+        fontSize: wp(3.5),
+        fontWeight: '600',
+        color: '#333333',
+        marginBottom: hp(0.5),
+        textAlign: 'center',
+    },
+    addonPrice: {
+        fontSize: wp(3.5),
+        fontWeight: 'bold',
+        color: '#3DA9B7',
+    },
+    selectedBadge: {
+        position: 'absolute',
+        top: -8,
+        right: -8,
+        backgroundColor: '#3DA9B7',
+        borderRadius: 10,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+    },
+    selectedBadgeText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: 'bold',
     },
     dropdownHeader: {
         borderWidth: 1,

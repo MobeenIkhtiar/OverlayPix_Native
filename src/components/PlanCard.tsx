@@ -44,7 +44,7 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, highlighted, onClick, selecte
             disabled={isEditMode}
         >
             <Text style={styles.planName}>{plan.name}</Text>
-            <Text style={styles.planPrice}>${plan.price}</Text>
+            <Text style={styles.planPrice}>{plan.formattedPrice || `$${plan.price}`}</Text>
             <Text style={styles.planInfo}>
                 {plan.guestLimit} guests • {plan.photoPool} photos • {getStorageRange()}
             </Text>

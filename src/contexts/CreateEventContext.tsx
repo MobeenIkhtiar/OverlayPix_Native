@@ -60,8 +60,7 @@ const initialStep3Data: CreateEventStep3Data = {
 const initialStep4Data: CreateEventStep4Data = {
     discountPrice: 0,
     payment: {
-        method: '',
-        paymentIntentId: ''
+        method: 'free',
     }
 };
 
@@ -99,9 +98,8 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     const isStep4Valid = useCallback(() => {
         const { payment } = step4Data;
-        // For now, only check if payment method is selected
-        // In a real implementation, you'd validate the token after payment processing
-        return payment.method !== '';
+        // Check if payment method is either 'iap' or 'free'
+        return payment.method === 'iap' || payment.method === 'free';
     }, [step4Data]);
 
     // Update functions
@@ -173,14 +171,13 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
             formData.append('finalPrice', String(finalPrice));
 
             if (data.step4Data.payment) {
-                formData.append('payment', JSON.stringify({
-                    method: data.step4Data.payment.method,
-                    paymentIntentId: data.step4Data.payment.paymentIntentId || paymentIntent?.id || ''
-                }));
+                formData.append('payment', JSON.stringify(data.step4Data.payment));
             }
             // Append overlay file
-            if (data.step1Data.overlay !== null && data.step1Data.overlay !== '') {
-                formData.append('overlay', data.step1Data.overlay);
+            if (step1Data.overlay !== '' && step1Data.overlayId !== '') {
+                formData.append('overlay', step1Data.overlayId);
+            } else if (step1Data.overlay !== '' && step1Data.overlayId === '') {
+                formData.append('overlay', step1Data.overlay);
             }
 
             if (data.step1Data.overlayName !== '') {
@@ -193,19 +190,22 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
             }
 
             // Debug: log all FormData entries
-            // console.log('FormData being sent:');
-            // for (const [key, value] of formData.entries()) {
-            //     console.log(key, JSON.stringify(value));
-            // }
+            if (typeof (formData as any)._parts !== 'undefined') {
+                (formData as any)._parts.forEach((part: any) => {
+                    console.log(part[0], part[1]);
+                });
+            } else {
+                console.log('formData structure not inspectable in this environment');
+            }
 
-            const config = { headers: { 'Content-Type': 'multipart/form-data' } };
+            // const config = { headers: { 'Content-Type': 'multipart/form-data' } };
             // Step 5: Make API call
             // console.log('Making API call to create event...');
             const response = await apiService<{ success: boolean; eventId?: string; id?: string; event?: { eventId: string } }>(
                 endPoints.createEvent,
                 'POST',
                 formData,
-                config
+                // config
             );
 
             // console.log('Create Event API response:', response?.data);
@@ -249,7 +249,7 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }, []);
 
     // Create event API call
-    const createEvent = useCallback(async (): Promise<{ success: boolean; eventId?: string } | null> => {
+    const createEvent = useCallback(async (paymentData?: any): Promise<{ success: boolean; eventId?: string } | null> => {
         try {
             setIsLoading(true);
             setError(null);
@@ -292,10 +292,10 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
             }));
             formData.append('finalPrice', String(finalPrice));
 
-            if (step4Data.payment && (step4Data.payment.paymentIntentId || step4Data.payment.paypalOrderId)) {
-                formData.append('payment', JSON.stringify({
-                    ...step4Data.payment,
-                }));
+            if (paymentData) {
+                formData.append('payment', JSON.stringify(paymentData));
+            } else if (step4Data.payment) {
+                formData.append('payment', JSON.stringify(step4Data.payment));
             }
             // Append overlay file
             if (step1Data.overlay !== '' && step1Data.overlayId !== '') {
@@ -325,14 +325,14 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 console.log('formData structure not inspectable in this environment');
             }
 
-            const config = { headers: { 'Content-Type': 'multipart/form-data' } };
+            // const config = { headers: { 'Content-Type': 'multipart/form-data' } };
             // Step 5: Make API call
             // console.log('Making API call to create event...');
             const response = await apiService<{ success: boolean; eventId?: string; id?: string; event?: { eventId: string } }>(
                 endPoints.createEvent,
                 'POST',
                 formData,
-                config
+                // config
             );
 
             // console.log('Create Event API response:', response?.data);
@@ -604,9 +604,7 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
                     }
                 },
                 finalPrice: data.step2Data.plan.finalPrice,
-                payment: {
-                    paymentIntentId: data.step4Data.payment.paymentIntentId || paymentIntent?.id || ''
-                }
+                payment: data.step4Data.payment
             };
 
             console.log('Upgrade event with data:', eventData);
@@ -649,10 +647,7 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
                     }
                 },
                 finalPrice: step2Data.plan.finalPrice,
-                payment: {
-                    paymentIntentId: step4Data.payment.paymentIntentId
-                }
-
+                payment: step4Data.payment
             };
 
             // console.log('udgrade event from context =>>>>>>>>', eventData)

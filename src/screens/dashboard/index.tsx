@@ -242,13 +242,15 @@ const DashboardScreen: React.FC = () => {
                                         }
                                         photos={event.photosCount}
                                         guests={event.guestsCount}
-                                        onViewImages={() => { 
-                                            navigation.navigate(`eventGallery`, { eventId: event.eventId }) 
+                                        onViewImages={() => {
+                                            // navigation.navigate(`eventGallery`, { eventId: event.eventId })
                                         }}
                                         onEdit={() =>
                                             handleEditEvent(event.eventId)
                                         }
-                                        onUpgrade={() => { navigation.navigate(`upgradeEvent`, { eventId: event.eventId }) }}
+                                        onUpgrade={() => {
+                                            //  navigation.navigate(`upgradeEvent`, { eventId: event.eventId }) 
+                                        }}
                                         onQRCode={() => { navigation.navigate(`inviteGuestEasily`, { eventId: event.eventId }) }}
                                     />
                                 </View>
@@ -291,7 +293,7 @@ const DashboardScreen: React.FC = () => {
                                         // Only allow view images for joined events
                                         onViewImages={() => {
                                             //  navigation.navigate(`userGallery`, { eventId: event?.eventId, fromDashboard: true }) 
-                                            }}
+                                        }}
                                     // // Hide edit/upgrade/qr for joined events
                                     // onEdit={undefined}
                                     // onUpgrade={undefined}
@@ -341,7 +343,7 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB',
         borderWidth: 1,
         marginRight: wp(2),
-        paddingVertical:Platform.OS === 'ios' ? hp(1.3) : hp(0),
+        paddingVertical: Platform.OS === 'ios' ? hp(1.3) : hp(0),
     },
     searchIconContainer: {
         marginRight: wp(2),

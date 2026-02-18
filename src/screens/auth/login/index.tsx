@@ -105,7 +105,7 @@ const Login: React.FC = () => {
         if (token && isAnon !== 'true' && uid) {
             const role = await fetchUserRole(uid);
             if (role && role !== 'guest') {
-                safeNavigate('/dashboard');
+                navigation.replace('dashboard');
                 return;
             }
             if (role === 'guest') {
@@ -173,7 +173,7 @@ const Login: React.FC = () => {
                 return;
             } else {
                 navigation.replace('dashboard');
-                   console.log('token=>>>>>>>>>>>>>>',token);
+                console.log('token=>>>>>>>>>>>>>>', token);
                 // navigation.navigate('joinedEvent');
                 return;
             }
@@ -429,14 +429,14 @@ const Login: React.FC = () => {
                         </View>
 
                         <View style={styles.socialButtonsContainer}>
-               <TouchableOpacity
+                            <TouchableOpacity
                                 style={styles.socialButton}
                                 onPress={handleGoogleLogin}
                                 disabled={loading}
                             >
                                 <Image source={icons.google} style={styles.socialIcon} />
                             </TouchableOpacity>
-                            
+
                             <TouchableOpacity
                                 style={styles.socialButton}
                                 onPress={handleFacebookLogin}
@@ -445,13 +445,13 @@ const Login: React.FC = () => {
                                 <Image source={icons.facebook} style={styles.socialIcon} />
                             </TouchableOpacity>
                             {
-                            Platform.OS === 'ios' && <TouchableOpacity
-                                style={styles.socialButton}
-                                onPress={handleAppleLogin}
-                                disabled={loading}
-                            >
-                                <Image source={icons.apple} style={styles.socialIcon} />
-                            </TouchableOpacity>
+                                Platform.OS === 'ios' && <TouchableOpacity
+                                    style={styles.socialButton}
+                                    onPress={handleAppleLogin}
+                                    disabled={loading}
+                                >
+                                    <Image source={icons.apple} style={styles.socialIcon} />
+                                </TouchableOpacity>
                             }
                         </View>
 

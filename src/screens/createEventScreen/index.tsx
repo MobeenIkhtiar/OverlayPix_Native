@@ -402,22 +402,14 @@ const CreateEventScreen: React.FC = () => {
 
             // Update the overlay data
             if (selectedAsset.uri && selectedAsset.type) {
-                // // Create a File object from the selected asset
-                // const response = await fetch(selectedAsset.uri);
-                // const blob = await response.blob();
-                // const file = new File(
-                //     [blob],
-                //     selectedAsset.fileName ?? 'overlay.png',
-                //     { type: selectedAsset.type }
-                // );
-                // // Store the file with uri property for preview
-                // const fileWithUri = Object.assign(file, { uri: selectedAsset.uri });
                 updateStep1Data({
                     overlay: {
                         uri: selectedAsset.uri,
                         type: selectedAsset.type,
-                        name: selectedAsset.fileName,
-                    }
+                        name: selectedAsset.fileName || 'overlay.png',
+                    },
+                    overlayId: '',
+                    overlayName: ''
                 });
             }
         } catch (error) {
@@ -1032,7 +1024,7 @@ const styles = StyleSheet.create({
         paddingVertical: hp(2),
         fontSize: wp(4.5),
         backgroundColor: 'white',
-        color:'#000'
+        color: '#000'
     },
     select: {
         borderWidth: 1,

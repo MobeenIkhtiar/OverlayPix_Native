@@ -1,5 +1,5 @@
-export const BASEURL = 'https://overlay-pix-back.onrender.com/api';
-// export const BASEURL = 'http://192.168.100.215:5001/api';
+// export const BASEURL = 'https://overlay-pix-back.onrender.com/api';
+export const BASEURL = 'https://empathetic-spirit-production-8c98.up.railway.app/api';
 // export const BASEURL = 'http://localhost:5001/api';
 
 export const endPoints = {
@@ -21,20 +21,11 @@ export const endPoints = {
     createOverlay: '/admin/overlays',
     getAllOverlays: '/admin/overlays',
 
-    // Payment endpoints
-    createPaymentIntent: '/payments/create-intent',
-    createCashAppIntent: '/payments/create-cashapp-intent',
-    upgradePaymentIntent: '/payments/upgrade-intent',
-    upgradeCashAppIntent: '/payments/upgrade-cashapp-intent',
-    confirmPayment: '/payments/confirm',
-    confirmCashAppIntent: '/payments/confirm-cashapp-intent',
+    // Payment endpoints - IAP
+    validateIAPReceipt: '/payments/validate-iap-receipt',
+    createIAPEvent: '/events/create-with-iap',
+    upgradeIAPEvent: '/events/upgrade-with-iap',
     validateDiscountCode: '/admin/discountcodes/validate',
-
-    // PayPal endpoints
-    createPayalIntent: '/payments/create-paypal-order',
-    confirmPayalIntent: '/payments/capture-paypal-order',
-    paypalStatus: '/payments/paypal-status',
-    paypalUpgradeOrder: '/payments/paypal-upgrade-order',
 
     //admin
     createPricingPlan: '/plans/create',

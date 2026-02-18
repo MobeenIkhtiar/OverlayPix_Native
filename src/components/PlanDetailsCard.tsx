@@ -22,25 +22,25 @@ const PlanDetailsCard: React.FC<PlanDetailsCardProps> = ({
 
     const planDetails = [
         {
-            label: 'Base Plan',
+            label: step2Data.plan.planName || 'Base Plan',
             value: step2Data.plan?.basePlan != null ? `$${formatPrice(step2Data.plan.basePlan)}` : '$0',
         },
-        {
-            label: `Photo Storage Duration (${step2Data?.plan?.storageDays} days)`,
-            value: `$${formatPrice(step2Data?.plan?.storageDaysPrice ?? 0)}`,
-        },
-        {
-            label: `Guest Limit ( ${step2Data?.plan?.guestLimit ?? 0} guests )`,
-            value: `$${formatPrice(step2Data?.plan?.guestLimitPrice ?? 0)}`,
-        },
-        {
-            label: `Photo Pool ( ${step2Data?.plan?.photoPool ?? 0} photos )`,
-            value: `$${formatPrice(step2Data?.plan?.photoPoolPrice ?? 0)}`,
-        },
-        {
-            label: 'Discount',
-            value: `$${formatPrice(step4Data.discountPrice)}`,
-        },
+        // {
+        //     label: `Photo Storage Duration (${step2Data?.plan?.storageDays} days)`,
+        //     value: `$${formatPrice(step2Data?.plan?.storageDaysPrice ?? 0)}`,
+        // },
+        // {
+        //     label: `Guest Limit ( ${step2Data?.plan?.guestLimit ?? 0} guests )`,
+        //     value: `$${formatPrice(step2Data?.plan?.guestLimitPrice ?? 0)}`,
+        // },
+        // {
+        //     label: `Photo Pool ( ${step2Data?.plan?.photoPool ?? 0} photos )`,
+        //     value: `$${formatPrice(step2Data?.plan?.photoPoolPrice ?? 0)}`,
+        // },
+        // {
+        //     label: 'Discount',
+        //     value: `$${formatPrice(step4Data.discountPrice)}`,
+        // },
     ];
 
     const handlePrevious = () => {

@@ -12,6 +12,7 @@ export interface EventPlan {
     storageDays: number;
     finalPrice: number;
     permissions: EventPermissions;
+    planName?: string;
     basePlan?: number
     storageDaysPrice?: number
     guestLimitPrice?: number;
@@ -27,9 +28,14 @@ export interface CustomPlan {
 }
 
 export interface EventPayment {
-    method: string;
-    paymentIntentId?: string;
-    paypalOrderId?: string;
+    method: 'iap' | 'free' | 'revenuecat';
+    iapReceipt?: string;
+    iapProductId?: string;
+    iapTransactionId?: string;
+    platform?: 'ios' | 'android';
+    customerInfo?: any; // RevenueCat CustomerInfo
+    productId?: string;
+    transactionId?: string;
 }
 
 export interface EventBranding {
@@ -123,7 +129,7 @@ export interface CreateEventContextType {
     isStep4Valid: boolean;
 
     // API actions
-    createEvent: () => Promise<any>;
+    createEvent: (paymentData?: EventPayment) => Promise<any>;
     createEventWithData: (data: {
         step1Data: any;
         step2Data: any;

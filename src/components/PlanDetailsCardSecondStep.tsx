@@ -9,6 +9,7 @@ interface PlanDetailsCardSecondStepProps {
     guestLimit: number;
     maxPerGuest: number;
     basePlan: string;
+    planName: string;
     photoStorageDuration: string;
     guestLimitPrice: string;
     photoPoolPrice: string;
@@ -25,6 +26,7 @@ const PlanDetailsCardSecondStep: React.FC<PlanDetailsCardSecondStepProps> = ({
     guestLimit,
     maxPerGuest,
     basePlan,
+    planName,
     photoStorageDuration,
     guestLimitPrice,
     photoPoolPrice,
@@ -70,18 +72,18 @@ const PlanDetailsCardSecondStep: React.FC<PlanDetailsCardSecondStepProps> = ({
                     <Text style={styles.statValue}>{guestLimit}</Text>
                     <Text style={styles.statLabel}>Guest Limit</Text>
                 </View>
-                <View style={styles.statBox}>
+                {/* <View style={styles.statBox}>
                     <Text style={styles.statValue}>{String(maxPerGuest).padStart(2, '0')}</Text>
                     <Text style={styles.statLabel}>Max per Guest</Text>
-                </View>
+                </View> */}
             </View>
 
             <View style={styles.detailsContainer}>
                 <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Base Plan</Text>
+                    <Text style={styles.detailLabel}>{planName}</Text>
                     <Text style={styles.detailValue}>{basePlan}</Text>
                 </View>
-                <View style={styles.detailRow}>
+                {/* <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Photo Storage Duration</Text>
                     <Text style={styles.detailValue}>{photoStorageDuration}</Text>
                 </View>
@@ -92,7 +94,7 @@ const PlanDetailsCardSecondStep: React.FC<PlanDetailsCardSecondStepProps> = ({
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Photo Pool</Text>
                     <Text style={styles.detailValue}>{photoPoolPrice}</Text>
-                </View>
+                </View> */}
                 {/* <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Photos Per Guest</Text>
                     <Text style={styles.detailValue}>{photosPerGuestPrice}</Text>

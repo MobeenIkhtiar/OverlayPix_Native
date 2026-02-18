@@ -6,14 +6,37 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { configureGoogleSignIn } from './src/config/googleSignIn'
 import { configureFacebookSDK } from './src/config/facebookSDK'
 import { CreateEventProvider } from './src/contexts/CreateEventContext'
-import { StripeProvider } from '@stripe/stripe-react-native'
-import { STRIPE_PUBLISHABLE_KEY } from '@env'
+import { revenueCatService } from './src/services/revenueCatService'
+import { onAuthStateChanged } from '@react-native-firebase/auth'
+import { auth } from './src/services/loginService'
 
 const App = () => {
   useEffect(() => {
     // Initialize social authentication providers
     configureGoogleSignIn();
     configureFacebookSDK();
+
+    // Initialize RevenueCat (with safety check)
+    try {
+      revenueCatService.initialize().catch(error => {
+        console.error('Failed to initialize RevenueCat:', error);
+      });
+    } catch (error) {
+      console.error('RevenueCat module not available:', error);
+    }
+
+    // Listen for auth state changes to sync RevenueCat user ID
+    const subscriber = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        console.log('User logged in, setting RevenueCat ID:', user.uid);
+        await revenueCatService.setUserId(user.uid);
+      } else {
+        console.log('User logged out, resetting RevenueCat');
+        await revenueCatService.logout();
+      }
+    });
+
+    return () => subscriber(); // unsubscribe on unmount
   }, []);
 
   return (
@@ -25,16 +48,10 @@ const App = () => {
       />
 
       <SafeAreaProvider style={styles.container}>
-        <StripeProvider
-          publishableKey={STRIPE_PUBLISHABLE_KEY || ''}
-          merchantIdentifier="merchant.com.overlaypix"
-          urlScheme="overlaypix"
-        >
-          <CreateEventProvider>
-            <AppNavigator />
-            <Toast />
-          </CreateEventProvider>
-        </StripeProvider>
+        <CreateEventProvider>
+          <AppNavigator />
+          <Toast />
+        </CreateEventProvider>
       </SafeAreaProvider>
     </>
   );
