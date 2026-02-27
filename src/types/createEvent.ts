@@ -17,6 +17,7 @@ export interface EventPlan {
     storageDaysPrice?: number
     guestLimitPrice?: number;
     photoPoolPrice?: number;
+    currencySymbol?: string;
 }
 
 export interface CustomPlan {
@@ -57,6 +58,7 @@ export interface EventData {
     plan: EventPlan;
     branding?: EventBranding;
     payment?: EventPayment;
+    hostName?: string;
 }
 
 export interface CreateEventData {
@@ -75,7 +77,8 @@ export interface CreateEventData {
     finalPrice: number;
     payment: EventPayment & { discountCode?: string };
     overlay?: any,
-    eventPicture?: any
+    eventPicture?: any;
+    hostName?: string;
 }
 
 export interface CreateEventStep1Data {
@@ -102,6 +105,7 @@ export interface CreateEventStep3Data {
     eventPicture: string | null;
     eventPictureFile?: any;
     overlayTemplate?: File;
+    hostName?: string;
 }
 
 export interface CreateEventStep4Data {

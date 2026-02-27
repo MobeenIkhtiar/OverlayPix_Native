@@ -23,6 +23,14 @@ export interface EventData {
     eventLink?: string;
     shareCode?: string;
     plan?: PlanData;
+    eventStartTime?: string;
+    basePlanName?: string;
+    customPlan?: {
+        guestLimit: number;
+        photoPool: number;
+        storageDays: number;
+        photosPerGuest?: number;
+    };
 }
 
 export interface DashboardData {

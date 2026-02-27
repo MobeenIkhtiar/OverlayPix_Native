@@ -8,19 +8,9 @@ import { guestServices } from '../../../services/guestsService';
 import { HEIGHT, hp, wp } from '../../../contants/StyleGuide';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const FILTERS = [
-    { name: 'none', label: 'Original', style: '' },
-    { name: 'grayscale', label: 'B&W', style: 'grayscale(1)' },
-    { name: 'sepia', label: 'Vintage', style: 'sepia(0.8)' },
-    { name: 'invert', label: 'Invert', style: 'invert(1)' },
-    { name: 'contrast', label: 'Contrast', style: 'contrast(1.5)' },
-    { name: 'brightness', label: 'Bright', style: 'brightness(1.3)' },
-    { name: 'blur', label: 'Soft', style: 'blur(1px)' },
-    { name: 'hue-rotate', label: 'Color', style: 'hue-rotate(90deg)' },
-    { name: 'saturate', label: 'Vivid', style: 'saturate(1.8)' },
-    { name: 'warm', label: 'Warm', style: 'sepia(0.3) brightness(1.1) saturate(1.2)' },
-    { name: 'cool', label: 'Cool', style: 'hue-rotate(180deg) brightness(0.9)' },
-];
+import { FILTERS } from './filterMatrices';
+import SkiaFilteredImage from './SkiaFilteredImage';
+import { applyFilterToImage } from './applySkiaFilter';
 
 const TakePictureScreen = () => {
     const navigation: any = useNavigation();
@@ -38,10 +28,9 @@ const TakePictureScreen = () => {
     const [capturedImage, setCapturedImage] = useState<any>(null);
     const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
-    const [flashSupported, setFlashSupported] = useState<boolean>(true); // Most mobile devices support 'torch'
+    const [flashSupported, setFlashSupported] = useState<boolean>(true);
     const [flashOn, setFlashOn] = useState<boolean>(false);
     const [flashError, setFlashError] = useState<string | null>(null);
-    // const [cropRect, setCropRect] = useState<{ sx: number, sy: number, sw: number, sh: number } | null>(null);
     const [cameraPermission, setCameraPermission] = useState<CameraPermissionStatus>('not-determined');
     const [isCameraReady, setIsCameraReady] = useState<boolean>(false);
 
@@ -54,7 +43,6 @@ const TakePictureScreen = () => {
     const [frameRect, setFrameRect] = useState<{ left: number, top: number, width: number, height: number }>({ left: 0, top: 0, width: 0, height: 0 });
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [hideButton, setHideButton] = useState<boolean>(false);
-    // const filterImageRef = useRef<Image | null>(null);
 
     // Camera device (v4 API)
     const device = useCameraDevice('back');
@@ -83,7 +71,6 @@ const TakePictureScreen = () => {
     // Track camera ready state
     useEffect(() => {
         if (cameraPermission === 'granted' && device && !isPreviewMode) {
-            // Give camera a moment to initialize after mounting
             const timer = setTimeout(() => {
                 setIsCameraReady(true);
             }, 500);
@@ -94,7 +81,6 @@ const TakePictureScreen = () => {
     }, [cameraPermission, device, isPreviewMode]);
 
     useEffect(() => {
-        // Show popup on mount, hide after 5 seconds
         if (!isPreviewMode) {
             setShowClickAnywherePopup(true);
             if (popupTimeout.current) clearTimeout(popupTimeout.current);
@@ -122,7 +108,7 @@ const TakePictureScreen = () => {
                     const blob = await response.blob();
                     const dataUrl = Platform.OS === 'web'
                         ? URL.createObjectURL(blob)
-                        : overlayUrl; // For native, pass as uri directly
+                        : overlayUrl;
                     if (isMounted) setimageOverlay(dataUrl);
                 } catch (e) {
                     if (isMounted) setimageOverlay(overlayUrl);
@@ -140,22 +126,17 @@ const TakePictureScreen = () => {
     // Frame calculation for overlay/filter area
     useEffect(() => {
         const { width, height } = Dimensions.get('window');
-        // Since camera and overlay fill the full screen with cover mode,
-        // frameRect should represent the full visible area
         setFrameRect({ left: 0, top: 0, width: width, height: height });
     }, []);
 
-    // Flash toggle handler (native torch mode)
+    // Flash toggle handler
     const handleToggleFlash = async () => {
         setFlashError(null);
         setFlashOn((prev) => !prev);
-        // Real device flash controlled via prop on Camera (see below)
     };
 
-    // Turn off flash util
     const turnOffFlash = async () => setFlashOn(false);
 
-    // Camera screen tap handler
     const handleCameraScreenPress = async () => {
         if (!isPreviewMode) {
             setShowClickAnywherePopup(false);
@@ -168,7 +149,6 @@ const TakePictureScreen = () => {
     const handleCapture = async () => {
         console.log('Capture attempt - Permission:', cameraPermission, 'Device:', !!device, 'Device ID:', device?.id, 'Ref:', !!cameraRef.current, 'Ready:', isCameraReady);
 
-        // Check permissions first
         if (cameraPermission !== 'granted') {
             Alert.alert('Permission Required', 'Camera permission is required to take photos.');
             return;
@@ -194,47 +174,37 @@ const TakePictureScreen = () => {
 
         try {
             setLoading(true);
-            
-            // Hide the button before capturing
             setHideButton(true);
-            
-            // Wait a brief moment for the UI to update
             await new Promise<void>(resolve => setTimeout(() => resolve(), 100));
-            
-            // First, take the camera photo
+
             const photo = await cameraRef.current.takePhoto({ flash: flashOn ? 'on' : 'off' });
             const cameraUri = `file://${photo.path}`;
-            
-            // If we have an overlay, composite it with Skia
+
             if (imageOverlay) {
                 try {
-                    // Get screen dimensions
                     const { width, height } = Dimensions.get('window');
-                    
-                    // Load both images as Skia images
+
                     const cameraResponse = await fetch(cameraUri);
                     const cameraBuffer = await cameraResponse.arrayBuffer();
                     const cameraData = Skia.Data.fromBytes(new Uint8Array(cameraBuffer));
                     const cameraImage = Skia.Image.MakeImageFromEncoded(cameraData);
-                    
+
                     const overlayResponse = await fetch(imageOverlay);
                     const overlayBuffer = await overlayResponse.arrayBuffer();
                     const overlayData = Skia.Data.fromBytes(new Uint8Array(overlayBuffer));
                     const overlaySkiaImage = Skia.Image.MakeImageFromEncoded(overlayData);
-                    
+
                     if (!cameraImage || !overlaySkiaImage) {
                         throw new Error('Failed to load images for compositing');
                     }
-                    
-                    // Create a surface to draw on
+
                     const surface = Skia.Surface.Make(width, height);
                     if (!surface) {
                         throw new Error('Failed to create Skia surface');
                     }
-                    
+
                     const canvas = surface.getCanvas();
-                    
-                    // Draw camera image (background)
+
                     const cameraRect = Skia.XYWHRect(0, 0, width, height);
                     canvas.drawImageRect(
                         cameraImage,
@@ -242,40 +212,35 @@ const TakePictureScreen = () => {
                         cameraRect,
                         Skia.Paint()
                     );
-                    
-                    // Draw overlay image on top with proper alpha blending
+
                     const overlayPaint = Skia.Paint();
-                    overlayPaint.setAlphaf(0.98); // Match the opacity from overlayImage style
+                    overlayPaint.setAlphaf(0.98);
                     canvas.drawImageRect(
                         overlaySkiaImage,
                         Skia.XYWHRect(0, 0, overlaySkiaImage.width(), overlaySkiaImage.height()),
                         cameraRect,
                         overlayPaint
                     );
-                    
-                    // Get the final image
+
                     const snapshot = surface.makeImageSnapshot();
                     const base64 = snapshot.encodeToBase64();
                     const compositeUri = `data:image/png;base64,${base64}`;
-                    
+
                     setCapturedImage(compositeUri);
                 } catch (compositeError) {
                     console.error('Composite error:', compositeError);
-                    // Fallback to camera image only
                     setCapturedImage(cameraUri);
                 }
             } else {
-                // No overlay, just use camera photo
                 setCapturedImage(cameraUri);
             }
-            
+
             setIsPreviewMode(true);
         } catch (err: any) {
             console.error('Capture error:', err);
             Alert.alert("Error", err?.message || "Failed to take photo. Please try again.");
         } finally {
             setLoading(false);
-            // Show the button again
             setHideButton(false);
         }
     };
@@ -287,20 +252,9 @@ const TakePictureScreen = () => {
         setSelectedFilter('none');
     };
 
-    // Get RN filter style (not all css filters supported; map to RN compatible ones)
-    const getFilterStyle = (filterName: string | null) => {
-        // For react-native: Only "grayscale", "sepia", "invert", "brightness", "contrast"
-        const filterObj = FILTERS.find(f => f.name === filterName);
-        if (!filterObj || filterObj.style === '') return {};
-        if (filterObj.name === 'grayscale') return { tintColor: 'gray', opacity: 0.7 };
-        if (filterObj.name === 'invert') return { tintColor: undefined, opacity: 0.95 };
-        // For sepia, brightness, etc, you will need a lib or image-filter-proc; using placeholder here
-        return {};
-    };
-
-    // DataURL to file util (native: just use image uri/path; web: fetch as blob)
+    // DataURL to file util
     const dataURLtoFile = async (dataurl: string, filename: string) => {
-        if (Platform.OS !== 'web') return { uri: dataurl, name: filename, type: 'image/png' }; // RN, just pass uri + meta
+        if (Platform.OS !== 'web') return { uri: dataurl, name: filename, type: 'image/png' };
         try {
             const res = await fetch(dataurl);
             const blob = await res.blob();
@@ -348,19 +302,22 @@ const TakePictureScreen = () => {
         }
     };
 
-    // Save with filter (native: only supported with an image filter lib, this is a placeholder pass-through)
+    // Save — bakes the selected filter into the image before uploading
     const handleSave = async () => {
         if (!capturedImage) return;
-
-        const filterStyle = getFilterStyle(selectedFilter);
-
-        const randomName = `photo_${Math.random().toString(36).substring(2, 10)}.png`;
-        let file = null;
-        let fileUrl = capturedImage;
-        // If advanced filters are required, implement using something like react-native-image-filter-kit or react-native-image-editor.
-        // Here, just pass original uri
-        file = await dataURLtoFile(capturedImage, randomName);
-        await uploadPhoto(file, fileUrl);
+        try {
+            setLoading(true);
+            // Apply filter at native resolution (returns data URI with filter baked in)
+            const filteredUri = await applyFilterToImage(capturedImage, selectedFilter);
+            const randomName = `photo_${Math.random().toString(36).substring(2, 10)}.png`;
+            const file = await dataURLtoFile(filteredUri, randomName);
+            await uploadPhoto(file, filteredUri);
+        } catch (err: any) {
+            console.error('Save error:', err);
+            Alert.alert('Error', err?.message || 'Failed to save photo.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     // UI Render
@@ -462,17 +419,13 @@ const TakePictureScreen = () => {
                     </View>
                 )}
 
-                {/* Framing mask - custom overlay with lines */}
-                {
-                    !isPreviewMode && (
-                        <View style={styles.frameMask}>
-                            {/* ToDRAW: You can place SVG here (using react-native-svg) */}
-                            {/* Here, just a semi-transparent mask & borders */}
-                            <View style={[StyleSheet.absoluteFill, styles.maskBG]} />
-                            <View style={[styles.maskBorder, { left: frameRect.left, top: frameRect.top, width: frameRect.width, height: frameRect.height }]} />
-                        </View>
-                    )
-                }
+                {/* Framing mask */}
+                {!isPreviewMode && (
+                    <View style={styles.frameMask}>
+                        <View style={[StyleSheet.absoluteFill, styles.maskBG]} />
+                        <View style={[styles.maskBorder, { left: frameRect.left, top: frameRect.top, width: frameRect.width, height: frameRect.height }]} />
+                    </View>
+                )}
 
                 {/* Capture Button */}
                 {!isPreviewMode && !hideButton && (
@@ -497,10 +450,11 @@ const TakePictureScreen = () => {
                 <View style={styles.previewModal}>
                     {/* Full screen image preview */}
                     <View style={styles.previewImageBox}>
-                        <Image
-                            source={{ uri: capturedImage }}
-                            style={[styles.capturedImage, getFilterStyle(selectedFilter)]}
-                            resizeMode="cover"
+                        <SkiaFilteredImage
+                            uri={capturedImage}
+                            style={styles.capturedImage}
+                            filterName={selectedFilter}
+                            fit="cover"
                         />
                     </View>
 
@@ -524,13 +478,14 @@ const TakePictureScreen = () => {
                                         { marginLeft: idx === 0 ? wp(8) : 0 }
                                     ]}
                                 >
-                                    <Image
-                                        source={{ uri: capturedImage }}
+                                    <SkiaFilteredImage
+                                        uri={capturedImage}
                                         style={[
-                                            styles.filterPreviewImg,
+                                            styles.filterThumbImgWrap,
                                             isSelected ? styles.filterSelectedImg : {},
-                                            getFilterStyle(filter.name)
-                                        ]}
+                                        ] as any}
+                                        filterName={filter.name}
+                                        fit="cover"
                                     />
                                     <Text style={styles.filterLabel}>{filter.label}</Text>
                                 </TouchableOpacity>
@@ -539,7 +494,7 @@ const TakePictureScreen = () => {
                         <View style={{ width: wp(4) }} />
                     </ScrollView>
 
-                    {/* Bottom Buttons - positioned at very bottom */}
+                    {/* Bottom Buttons */}
                     <View style={styles.bottomBar}>
                         <TouchableOpacity
                             onPress={handleRetake}
@@ -599,7 +554,6 @@ const styles = StyleSheet.create({
     },
     previewContainer: {
         width: '100%',
-        // backgroundColor: 'black',
         position: 'relative',
         flex: 1,
         overflow: 'hidden',
@@ -700,17 +654,14 @@ const styles = StyleSheet.create({
         height: wp(16),
         borderRadius: wp(16),
         backgroundColor: '#fff',
-        // shadowColor: "#000",
     },
     previewModal: {
         ...StyleSheet.absoluteFillObject,
         zIndex: 1000,
-        // backgroundColor: '#000',
     },
     previewImageBox: {
         width: '100%',
         flex: 1,
-        // backgroundColor: '#000',
         overflow: 'hidden',
         position: 'relative',
     },
@@ -747,11 +698,17 @@ const styles = StyleSheet.create({
         borderColor: '#00ff88',
         borderRadius: wp(8),
     },
-    filterPreviewImg: {
+    filterThumbImgWrap: {
         width: wp(12),
         height: wp(12),
         borderRadius: wp(8),
         marginBottom: hp(1),
+        overflow: 'hidden',
+    },
+    filterPreviewImg: {
+        width: wp(12),
+        height: wp(12),
+        borderRadius: wp(8),
         resizeMode: 'cover'
     },
     filterSelectedImg: {
@@ -808,7 +765,6 @@ const styles = StyleSheet.create({
     },
     permissionContainer: {
         ...StyleSheet.absoluteFillObject,
-        // backgroundColor: '#000',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1,
@@ -830,9 +786,8 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: wp(3),
         marginTop: hp(1),
-        textAlign: 'center',
-        fontWeight: '500',
-    }
+        opacity: 0.7,
+    },
 });
 
 export default TakePictureScreen;

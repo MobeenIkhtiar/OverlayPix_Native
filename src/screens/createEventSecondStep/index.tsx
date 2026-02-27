@@ -82,7 +82,8 @@ const CreateEventSecondStep: React.FC = () => {
                             canViewGallery: true,
                             canSharePhotos: false,
                             canDownload: false
-                        }
+                        },
+                        currencySymbol: defaultPlan.formattedPrice ? defaultPlan.formattedPrice.replace(/[\d.,\s]+/g, '') : '$'
                     }, defaultPlan); // Pass defaultPlan so prices are calculated correctly
                 } else if (step2Data.plan.planId) {
                     // If we have a plan ID, find and set the selected plan
@@ -96,7 +97,10 @@ const CreateEventSecondStep: React.FC = () => {
                         }
 
                         if (!step2Data.plan.planName) {
-                            updatePlanData({ planName: currentPlan.name }, currentPlan);
+                            updatePlanData({
+                                planName: currentPlan.name,
+                                currencySymbol: currentPlan.formattedPrice ? currentPlan.formattedPrice.replace(/[\d.,\s]+/g, '') : '$'
+                            }, currentPlan);
                         }
                     }
                 }
@@ -298,7 +302,8 @@ const CreateEventSecondStep: React.FC = () => {
                 canViewGallery: true,
                 canSharePhotos: false,
                 canDownload: false
-            }
+            },
+            currencySymbol: plan.formattedPrice ? plan.formattedPrice.replace(/[\d.,\s]+/g, '') : '$'
         }, plan); // Pass plan as override since selectedPlan state hasn't updated yet
 
         // Set selected storage to the first storage option of the new plan

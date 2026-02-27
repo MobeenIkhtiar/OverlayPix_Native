@@ -243,7 +243,7 @@ const DashboardScreen: React.FC = () => {
                                         photos={event.photosCount}
                                         guests={event.guestsCount}
                                         onViewImages={() => {
-                                            // navigation.navigate(`eventGallery`, { eventId: event.eventId })
+                                            navigation.navigate(`userGallery`, { eventId: event.eventId })
                                         }}
                                         onEdit={() =>
                                             handleEditEvent(event.eventId)

@@ -1,5 +1,5 @@
-// export const BASEURL = 'https://overlay-pix-back.onrender.com/api';
-export const BASEURL = 'https://empathetic-spirit-production-8c98.up.railway.app/api';
+export const BASEURL = 'https://overlay-pix-back.onrender.com/api';
+// export const BASEURL = 'https://empathetic-spirit-production-8c98.up.railway.app/api';
 // export const BASEURL = 'http://localhost:5001/api';
 
 export const endPoints = {

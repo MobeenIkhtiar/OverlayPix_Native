@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -53,7 +53,7 @@ const CreateEventThirdStep: React.FC = () => {
     const [isEditMode, setIsEditMode] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const [eventId, setEventId] = useState<string>('');
-    const [hostName, setHostName] = useState<string>('');
+    // const [hostName, setHostName] = useState<string>('');
 
     const route = useRoute();
     const navigation = useNavigation();
@@ -128,7 +128,7 @@ const CreateEventThirdStep: React.FC = () => {
                     title={isEditMode ? "Edit Event" : "Create Event"}
                     subtitle=""
                     logoHover={true}
-                    setUserName={setHostName}
+                    setUserName={(name) => updateStep3Data({ hostName: name })}
                 />
                 {/* stepper */}
                 <Stepper steps={4} activeStep={3} />
@@ -141,6 +141,22 @@ const CreateEventThirdStep: React.FC = () => {
                         <Text style={styles.mainSubtitle}>
                             Add your event picture and brand color
                         </Text>
+                    </View>
+
+                    {/* Host Name Section */}
+                    <View style={styles.brandColorSection}>
+                        <Text style={styles.sectionTitle}>
+                            Host Name (Optional)
+                        </Text>
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={styles.input}
+                                value={step3Data.hostName || ''}
+                                onChangeText={(text: string) => updateStep3Data({ hostName: text })}
+                                placeholder="Enter Host Name"
+                                placeholderTextColor="#999"
+                            />
+                        </View>
                     </View>
 
                     {/* Brand Color Section */}
@@ -292,7 +308,7 @@ const CreateEventThirdStep: React.FC = () => {
                                         <Text style={styles.previewCardText}>{step2Data.plan.photosPerGuest} out of {step2Data.plan.photosPerGuest} pictures</Text>
                                     )}
                                 </View>
-                                <Text style={styles.previewCardHost}>Hosted by The {hostName}</Text>
+                                <Text style={styles.previewCardHost}>Hosted by {step3Data.hostName || 'The Host'}</Text>
                             </View>
                         </View>
 
@@ -679,6 +695,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: wp(2),
+    },
+    inputContainer: {
+        width: '100%',
+        height: hp(6),
+        borderWidth: 1,
+        borderColor: '#DFDFDF',
+        borderRadius: wp(2),
+        backgroundColor: '#FFFFFF',
+        justifyContent: 'center',
+        paddingHorizontal: wp(3),
+    },
+    input: {
+        fontSize: wp(4),
+        color: '#000000',
+        width: '100%',
+        height: '100%',
     },
 });
 

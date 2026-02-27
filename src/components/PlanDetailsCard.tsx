@@ -23,7 +23,7 @@ const PlanDetailsCard: React.FC<PlanDetailsCardProps> = ({
     const planDetails = [
         {
             label: step2Data.plan.planName || 'Base Plan',
-            value: step2Data.plan?.basePlan != null ? `$${formatPrice(step2Data.plan.basePlan)}` : '$0',
+            value: step2Data.plan?.basePlan != null ? `${step2Data.plan.currencySymbol || '$'}${formatPrice(step2Data.plan.basePlan)}` : `${step2Data.plan.currencySymbol || '$'}0`,
         },
         // {
         //     label: `Photo Storage Duration (${step2Data?.plan?.storageDays} days)`,
@@ -63,7 +63,7 @@ const PlanDetailsCard: React.FC<PlanDetailsCardProps> = ({
             <View style={styles.totalContainer}>
                 <Text style={styles.totalLabel}>Total Amount</Text>
                 <Text style={styles.totalValue}>
-                    ${formatPrice(step2Data.plan.finalPrice - step4Data.discountPrice)}
+                    {step2Data.plan.currencySymbol || '$'}{formatPrice(step2Data.plan.finalPrice - step4Data.discountPrice)}
                 </Text>
             </View>
 

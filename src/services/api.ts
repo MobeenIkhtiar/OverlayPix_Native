@@ -38,6 +38,9 @@ api.interceptors.request.use(
 
         const token = await getIdToken();
         //  console.log('global token =>>>>>>>>>>>', token)
+        const fullUrl = `${config.baseURL || ''}${config.url || ''}`;
+        console.log(`API Hit: ${fullUrl}`);
+
         if (token) {
             config.headers = config.headers || {};
             config.headers['Authorization'] = `Bearer ${token}`;

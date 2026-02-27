@@ -19,15 +19,54 @@ const EventCreatedScreen: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
 
     const parseDate = (
-        dateValue: { _seconds: number; _nanoseconds?: number } | null | undefined
+        dateValue: { _seconds: number; _nanoseconds?: number } | string | null | undefined,
+        startTime?: string
     ): string => {
+        if (!dateValue) return '';
 
-        if (!dateValue || typeof dateValue._seconds !== 'number') return '';
+        let date: Date;
 
-        const date = new Date(dateValue._seconds * 1000);
+        if (typeof dateValue === 'string') {
+            date = new Date(dateValue);
+        } else if (typeof dateValue === 'object' && dateValue !== null && '_seconds' in dateValue) {
+            date = new Date(dateValue._seconds * 1000);
+        } else {
+            return '';
+        }
 
-        // Convert to YYYY-MM-DD in UTC (matches API exactly)
-        return date.toISOString().split('T')[0];
+        if (isNaN(date.getTime())) return '';
+
+        // Format date part (YYYY-MM-DD or readable format)
+        const dateString = date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        if (startTime) {
+            // Convert 24h time to 12h time with AM/PM
+            const [hours, minutes] = startTime.split(':');
+            const hour = parseInt(hours, 10);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const formattedHour = hour % 12 || 12;
+            const timeString = `${formattedHour}:${minutes} ${ampm}`;
+            return `${dateString} at ${timeString}`;
+        }
+
+        return dateString;
+    };
+
+    const formatPlanName = (planName: string | undefined): string => {
+        if (!planName) return '';
+        // If it looks like an ID (contains underscore), format it
+        if (planName.includes('_')) {
+            return planName
+                .replace(/(_pkg|pkg)$/i, '') // Remove pkg or _pkg at the end
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, (char) => char.toUpperCase())
+                .trim();
+        }
+        return planName;
     };
 
 
@@ -72,7 +111,7 @@ const EventCreatedScreen: React.FC = () => {
     const handleShareLink = async () => {
         if (!eventData?.shareCode) return;
 
-        const url = `https://overlaypix.com/${eventData.shareCode}`;
+        const url = `https://overlaypix.com/termsAndPolicy/${eventData.shareCode}`;
         const shareData = {
             title: eventData?.name ? `Join my event: ${eventData.name}` : 'Join my event',
             message: eventData?.name
@@ -128,8 +167,8 @@ const EventCreatedScreen: React.FC = () => {
                         <View style={styles.card}>
                             <EventSummaryCard
                                 eventName={eventData?.name}
-                                dateTime={parseDate(eventData?.eventDate)}
-                                plan={eventData?.basePlanName}
+                                dateTime={parseDate(eventData?.eventDate, eventData?.eventStartTime)}
+                                plan={formatPlanName(eventData?.basePlanName)}
                                 guestLimit={eventData?.customPlan?.guestLimit}
                                 photoPool={eventData?.customPlan?.photoPool}
                                 photoDuration={eventData?.customPlan?.storageDays}

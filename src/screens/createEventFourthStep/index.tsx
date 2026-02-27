@@ -344,20 +344,6 @@ const CreateEventFourthStep: React.FC = () => {
                 />
                 <Stepper steps={4} activeStep={4} />
 
-                <Text style={{ color: 'red', fontSize: 20, textAlign: 'center', marginTop: 20 }} onPress={() => {
-
-                    const rcPaymentData = {
-                        method: 'revenuecat',
-                        customerInfo: {},
-                        productId: '',
-                        transactionId: '',
-                        platform: Platform.OS as 'ios' | 'android',
-                    };
-                    processEventCompletion(rcPaymentData)
-                }}>
-                    Press me
-                </Text>
-
                 <View style={styles.content}>
 
                     <PaymentForm

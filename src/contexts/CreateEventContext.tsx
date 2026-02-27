@@ -55,6 +55,7 @@ const initialStep3Data: CreateEventStep3Data = {
     fontSize: '12',
     eventPicture: '',
     eventPictureFile: undefined,
+    hostName: '',
 };
 
 const initialStep4Data: CreateEventStep4Data = {
@@ -189,6 +190,10 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 formData.append('eventPicture', data.step3Data.eventPictureFile);
             }
 
+            if (data.step3Data.hostName) {
+                formData.append('hostName', data.step3Data.hostName);
+            }
+
             // Debug: log all FormData entries
             if (typeof (formData as any)._parts !== 'undefined') {
                 (formData as any)._parts.forEach((part: any) => {
@@ -198,14 +203,14 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 console.log('formData structure not inspectable in this environment');
             }
 
-            // const config = { headers: { 'Content-Type': 'multipart/form-data' } };
+            const config = { headers: { 'Content-Type': 'multipart/form-data' } };
             // Step 5: Make API call
             // console.log('Making API call to create event...');
             const response = await apiService<{ success: boolean; eventId?: string; id?: string; event?: { eventId: string } }>(
                 endPoints.createEvent,
                 'POST',
                 formData,
-                // config
+                config
             );
 
             // console.log('Create Event API response:', response?.data);
@@ -313,6 +318,10 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 formData.append('eventPicture', step3Data.eventPictureFile);
             }
 
+            if (step3Data.hostName) {
+                formData.append('hostName', step3Data.hostName);
+            }
+
             // Debug: log all FormData entries
             // Log FormData keys and values in a way compatible with React Native's FormData (which may not support entries())
             console.log('FormData being sent:=>>>>>>>>>>>>>>>>>');
@@ -325,14 +334,14 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 console.log('formData structure not inspectable in this environment');
             }
 
-            // const config = { headers: { 'Content-Type': 'multipart/form-data' } };
+            const config = { headers: { 'Content-Type': 'multipart/form-data' } };
             // Step 5: Make API call
             // console.log('Making API call to create event...');
             const response = await apiService<{ success: boolean; eventId?: string; id?: string; event?: { eventId: string } }>(
                 endPoints.createEvent,
                 'POST',
                 formData,
-                // config
+                config
             );
 
             // console.log('Create Event API response:', response?.data);
@@ -470,7 +479,8 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
                     fontFamily: eventData?.typography || 'inter',
                     fontWeight: (eventData.fontStyle || 'bold').toLowerCase(),
                     fontSize: eventData?.fontSize || '12',
-                    eventPicture: eventData?.eventPictureUrl || null
+                    eventPicture: eventData?.eventPictureUrl || null,
+                    hostName: eventData?.hostName || ''
                 });
             }
 
@@ -537,6 +547,9 @@ export const CreateEventProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
             if (step3Data.eventPictureFile) {
                 eventData.append('eventPicture', step3Data.eventPictureFile);
+            }
+            if (step3Data.hostName) {
+                eventData.append('hostName', step3Data.hostName);
             }
             // console.log('event pic edit =>>>>>>>', step3Data.eventPictureFile)
             // console.log('edit api data =>>>>>>>>>');
