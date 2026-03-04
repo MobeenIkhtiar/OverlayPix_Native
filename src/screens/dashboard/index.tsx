@@ -292,7 +292,7 @@ const DashboardScreen: React.FC = () => {
                                         guests={event.guestName}
                                         // Only allow view images for joined events
                                         onViewImages={() => {
-                                            //  navigation.navigate(`userGallery`, { eventId: event?.eventId, fromDashboard: true }) 
+                                            navigation.navigate(`userGallery`, { eventId: event?.eventId, fromDashboard: true })
                                         }}
                                     // // Hide edit/upgrade/qr for joined events
                                     // onEdit={undefined}

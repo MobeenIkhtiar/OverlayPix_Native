@@ -5,41 +5,127 @@
  * Call this before uploading so the saved image matches what the user sees.
  */
 import { Skia, TileMode } from '@shopify/react-native-skia';
+import RNFS from 'react-native-fs';
 import { getFilterMatrix } from './filterMatrices';
 
 /**
+ * Extracts the raw base64 string from a data URI.
+ * Returns null if the URI is not a data URI.
+ */
+const extractBase64 = (uri: string): string | null => {
+    const match = uri.match(/^data:[^;]+;base64,(.+)$/);
+    return match ? match[1] : null;
+};
+
+const internalLoadSkiaImage = async (uri: string) => {
+    const base64 = extractBase64(uri);
+    if (base64) {
+        // For data URIs, use Skia.Data.fromBase64 directly (more reliable on Android)
+        const data = Skia.Data.fromBase64(base64);
+        return Skia.Image.MakeImageFromEncoded(data);
+    }
+
+    try {
+        // Try native loading first - orders of magnitude faster as it avoids JS Bridge array buffers
+        // fromURI is synchronous in RN Skia JS API but reads from file system/network natively
+        const data = await Skia.Data.fromURI(uri);
+        const image = Skia.Image.MakeImageFromEncoded(data);
+        if (image) return image;
+    } catch (e) {
+        console.warn('Skia.Data.fromURI failed, falling back to RNFS or fetch', e);
+    }
+
+    // Android file:// URI fallback using RNFS base64 string
+    // This is much faster than fetch().arrayBuffer() which creates huge JS arrays
+    if (uri.startsWith('file://')) {
+        try {
+            const fileBase64 = await RNFS.readFile(uri, 'base64');
+            const data = Skia.Data.fromBase64(fileBase64);
+            return Skia.Image.MakeImageFromEncoded(data);
+        } catch (fsErr) {
+            console.warn('RNFS.readFile failed, falling back to fetch', fsErr);
+        }
+    }
+
+    // Last resort fallback path
+    try {
+        const response = await fetch(uri);
+        const buffer = await response.arrayBuffer();
+        const data = Skia.Data.fromBytes(new Uint8Array(buffer));
+        return Skia.Image.MakeImageFromEncoded(data);
+    } catch (fetchErr) {
+        console.error('Failed to fallback fetch image:', fetchErr);
+        return null;
+    }
+};
+
+const skiaImagePromises = new Map<string, Promise<any>>();
+
+/**
+ * Wraps loading into a Promise cache to prevent 11 thumbnails from
+ * separately reading the massive 12MP camera image at the exact same time.
+ */
+const loadSkiaImage = async (uri: string) => {
+    if (skiaImagePromises.has(uri)) {
+        return skiaImagePromises.get(uri);
+    }
+
+    // Keep cache size small (last 5 images max)
+    if (skiaImagePromises.size > 5) {
+        const firstKey = skiaImagePromises.keys().next().value;
+        if (firstKey) skiaImagePromises.delete(firstKey);
+    }
+
+    const loadPromise = internalLoadSkiaImage(uri).catch(err => {
+        skiaImagePromises.delete(uri); // Clear failed loads
+        throw err;
+    });
+
+    skiaImagePromises.set(uri, loadPromise);
+    return loadPromise;
+};
+
+/**
  * Renders the image with the selected filter applied using an off-screen
- * Skia surface at the image's native resolution, then returns it as a
+ * Skia surface at the specified resolution, then returns it as a
  * base64 data URI.
  *
  * @param uri         - file:// or data:image/... URI of the source image
  * @param filterName  - one of the filter names from FILTERS (e.g. 'grayscale')
+ * @param maxSize     - optional max width/height for the output (used for thumbnails)
+ * @param overlayUri  - optional overlay URI to composite on top of the image
  * @returns           - data:image/png;base64,... URI with the filter baked in,
  *                      or the original URI if filterName is 'none' / on error
  */
 export const applyFilterToImage = async (
     uri: string,
     filterName: string,
+    maxSize?: number,
+    overlayUri?: string | null
 ): Promise<string> => {
-    // Nothing to do for the original filter
-    if (!uri || filterName === 'none') return uri;
+    // Nothing to do for the original filter if no overlay or resize
+    if (!uri || (filterName === 'none' && !overlayUri && !maxSize)) return uri;
 
     try {
-        // 1. Load the image bytes into Skia
-        const response = await fetch(uri);
-        const buffer = await response.arrayBuffer();
-        const data = Skia.Data.fromBytes(new Uint8Array(buffer));
-        const skiaImage = Skia.Image.MakeImageFromEncoded(data);
+        // 1. Load the image into Skia
+        const skiaImage = await loadSkiaImage(uri);
 
         if (!skiaImage) {
             console.warn('applyFilterToImage: could not decode image');
             return uri;
         }
 
-        const imgW = skiaImage.width();
-        const imgH = skiaImage.height();
+        let imgW = skiaImage.width();
+        let imgH = skiaImage.height();
 
-        // 2. Create an off-screen surface at native resolution (preserves quality)
+        // Scale down for thumbnails
+        if (maxSize && (imgW > maxSize || imgH > maxSize)) {
+            const scale = maxSize / Math.max(imgW, imgH);
+            imgW = Math.round(imgW * scale);
+            imgH = Math.round(imgH * scale);
+        }
+
+        // 2. Create an off-screen surface
         const surface = Skia.Surface.Make(imgW, imgH);
         if (!surface) {
             console.warn('applyFilterToImage: could not create Skia surface');
@@ -49,21 +135,44 @@ export const applyFilterToImage = async (
         const canvas = surface.getCanvas();
         const paint = Skia.Paint();
 
+        let colorFilter = null;
+        let imageFilter = null;
+
         // 3. Apply the correct filter type
         if (filterName === 'blur') {
             // Blur is a spatial filter — use ImageFilter
-            const blurFilter = Skia.ImageFilter.MakeBlur(6, 6, TileMode.Clamp, null);
-            paint.setImageFilter(blurFilter);
-        } else {
+            imageFilter = Skia.ImageFilter.MakeBlur(6, 6, TileMode.Clamp, null);
+            paint.setImageFilter(imageFilter);
+        } else if (filterName !== 'none') {
             // All other filters are color matrix transforms
             const matrix = getFilterMatrix(filterName);
-            const colorFilter = Skia.ColorFilter.MakeMatrix(matrix);
+            colorFilter = Skia.ColorFilter.MakeMatrix(matrix);
             paint.setColorFilter(colorFilter);
         }
 
         // 4. Draw the image with the filter paint
-        const srcRect = Skia.XYWHRect(0, 0, imgW, imgH);
-        canvas.drawImageRect(skiaImage, srcRect, srcRect, paint);
+        const srcRect = Skia.XYWHRect(0, 0, skiaImage.width(), skiaImage.height());
+        const dstRect = Skia.XYWHRect(0, 0, imgW, imgH);
+        canvas.drawImageRect(skiaImage, srcRect, dstRect, paint);
+
+        // 4.5. Draw overlay optionally (with the same filter applied to it!)
+        if (overlayUri) {
+            const overlayImage = await loadSkiaImage(overlayUri);
+            if (overlayImage) {
+                const overlayPaint = Skia.Paint();
+                overlayPaint.setAlphaf(0.98);
+                if (imageFilter) overlayPaint.setImageFilter(imageFilter);
+                if (colorFilter) overlayPaint.setColorFilter(colorFilter);
+
+                // Draw overlay stretching to fill the destination rect
+                canvas.drawImageRect(
+                    overlayImage,
+                    Skia.XYWHRect(0, 0, overlayImage.width(), overlayImage.height()),
+                    dstRect,
+                    overlayPaint
+                );
+            }
+        }
 
         // 5. Export as PNG base64
         const snapshot = surface.makeImageSnapshot();

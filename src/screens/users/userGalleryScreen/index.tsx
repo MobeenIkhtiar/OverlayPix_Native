@@ -67,6 +67,8 @@ const UserGalleryScreen: React.FC = () => {
         try {
             const response: any = await guestServices.getGuestsImages(eventID, endpoint);
 
+            console.log('response gallery =>>>>>>>>>>', response);
+
             if (activeTab === 'your') {
                 setGalleryImages(response || []);
             } else {
@@ -141,17 +143,17 @@ const UserGalleryScreen: React.FC = () => {
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: '#F6FFFF' }}>
-                <Header
-                    title={galleryImages?.eventName}
-                    subtitle={`${filteredImagesToShow?.length ?? 0} photos`}
-                    isGuest={true}
-                    logoHover={fromDashboard}
-                    isAnonymous={isAnonymous}
-                    shareId={galleryImages?.shareId}
-                    fromScreen={fromScreen}
-                />
-                {/* Top Bar */}
-                <View style={styles.container}>
+            <Header
+                title={galleryImages?.eventName}
+                subtitle={`${filteredImagesToShow?.length ?? 0} photos`}
+                isGuest={true}
+                logoHover={fromDashboard}
+                isAnonymous={isAnonymous}
+                shareId={galleryImages?.shareId}
+                fromScreen={fromScreen}
+            />
+            {/* Top Bar */}
+            <View style={styles.container}>
                 <View style={styles.topBarRow}>
                     <View style={styles.tabBtnRow}>
                         <TouchableOpacity
@@ -277,7 +279,7 @@ const UserGalleryScreen: React.FC = () => {
                     accessibilityLabel="Add Photo"
                     onPress={handleTakePicture}
                 >
-                        <Plus color={'#fff'} size={wp(7)} />
+                    <Plus color={'#fff'} size={wp(7)} />
                 </TouchableOpacity>
 
                 <PhotoLimitModal open={showPhotoLimitModal} onClose={() => setShowPhotoLimitModal(false)} />
@@ -326,7 +328,7 @@ const GalleryCard: React.FC<{ name: string; image: string; activeTab: 'your' | '
                 <View style={styles.galleryCardLiveBar}>
                     <Text style={styles.galleryCardLiveName} numberOfLines={1}>{name}</Text>
                     <TouchableOpacity onPress={handleShareLink} style={styles.shareBtn}>
-                         <Share2 color={'#000'} size={wp(5)} />
+                        <Share2 color={'#000'} size={wp(5)} />
                     </TouchableOpacity>
                     {copied && (
                         <View style={styles.copiedToast}>
@@ -337,7 +339,7 @@ const GalleryCard: React.FC<{ name: string; image: string; activeTab: 'your' | '
             ) : (
                 <View style={styles.galleryCardBtnBar}>
                     <TouchableOpacity onPress={handleShareLink} style={styles.shareBtn}>
-                         <Share2 color={'#000'} size={wp(5)} />
+                        <Share2 color={'#000'} size={wp(5)} />
                     </TouchableOpacity>
                     {copied && (
                         <View style={styles.copiedToast}>

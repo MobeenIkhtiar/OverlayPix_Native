@@ -26,6 +26,7 @@ const TakePictureScreen = () => {
     const overlayImage = useImage(imageOverlay || '');
     const [overlayLoading, setOverlayLoading] = useState<boolean>(false);
     const [capturedImage, setCapturedImage] = useState<any>(null);
+    const [thumbnailUri, setThumbnailUri] = useState<string | null>(null);
     const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const [flashSupported, setFlashSupported] = useState<boolean>(true);
@@ -33,10 +34,6 @@ const TakePictureScreen = () => {
     const [flashError, setFlashError] = useState<string | null>(null);
     const [cameraPermission, setCameraPermission] = useState<CameraPermissionStatus>('not-determined');
     const [isCameraReady, setIsCameraReady] = useState<boolean>(false);
-
-    // Popup State
-    const [showClickAnywherePopup, setShowClickAnywherePopup] = useState<boolean>(false);
-    const popupTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Camera/Filters state
     const [selectedFilter, setSelectedFilter] = useState<string>('none');
@@ -80,22 +77,6 @@ const TakePictureScreen = () => {
         }
     }, [cameraPermission, device, isPreviewMode]);
 
-    useEffect(() => {
-        if (!isPreviewMode) {
-            setShowClickAnywherePopup(true);
-            if (popupTimeout.current) clearTimeout(popupTimeout.current);
-            popupTimeout.current = setTimeout(() => {
-                setShowClickAnywherePopup(false);
-            }, 5000);
-        } else {
-            setShowClickAnywherePopup(false);
-            if (popupTimeout.current) clearTimeout(popupTimeout.current);
-        }
-        return () => {
-            if (popupTimeout.current) clearTimeout(popupTimeout.current);
-        };
-    }, [isPreviewMode]);
-
     // Overlay loading on mount
     useEffect(() => {
         let isMounted = true;
@@ -106,10 +87,15 @@ const TakePictureScreen = () => {
                     const response = await fetch(overlayUrl);
                     if (!response.ok) throw new Error('Failed to fetch overlay image');
                     const blob = await response.blob();
-                    const dataUrl = Platform.OS === 'web'
-                        ? URL.createObjectURL(blob)
-                        : overlayUrl;
-                    if (isMounted) setimageOverlay(dataUrl);
+                    if (Platform.OS === 'web') {
+                        if (isMounted) setimageOverlay(URL.createObjectURL(blob));
+                    } else {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            if (isMounted) setimageOverlay(reader.result as string);
+                        };
+                        reader.readAsDataURL(blob);
+                    }
                 } catch (e) {
                     if (isMounted) setimageOverlay(overlayUrl);
                 } finally {
@@ -136,14 +122,6 @@ const TakePictureScreen = () => {
     };
 
     const turnOffFlash = async () => setFlashOn(false);
-
-    const handleCameraScreenPress = async () => {
-        if (!isPreviewMode) {
-            setShowClickAnywherePopup(false);
-            if (popupTimeout.current) clearTimeout(popupTimeout.current);
-            await handleCapture();
-        }
-    };
 
     // Capture handling with Skia for proper transparency
     const handleCapture = async () => {
@@ -180,62 +158,18 @@ const TakePictureScreen = () => {
             const photo = await cameraRef.current.takePhoto({ flash: flashOn ? 'on' : 'off' });
             const cameraUri = `file://${photo.path}`;
 
-            if (imageOverlay) {
-                try {
-                    const { width, height } = Dimensions.get('window');
-
-                    const cameraResponse = await fetch(cameraUri);
-                    const cameraBuffer = await cameraResponse.arrayBuffer();
-                    const cameraData = Skia.Data.fromBytes(new Uint8Array(cameraBuffer));
-                    const cameraImage = Skia.Image.MakeImageFromEncoded(cameraData);
-
-                    const overlayResponse = await fetch(imageOverlay);
-                    const overlayBuffer = await overlayResponse.arrayBuffer();
-                    const overlayData = Skia.Data.fromBytes(new Uint8Array(overlayBuffer));
-                    const overlaySkiaImage = Skia.Image.MakeImageFromEncoded(overlayData);
-
-                    if (!cameraImage || !overlaySkiaImage) {
-                        throw new Error('Failed to load images for compositing');
-                    }
-
-                    const surface = Skia.Surface.Make(width, height);
-                    if (!surface) {
-                        throw new Error('Failed to create Skia surface');
-                    }
-
-                    const canvas = surface.getCanvas();
-
-                    const cameraRect = Skia.XYWHRect(0, 0, width, height);
-                    canvas.drawImageRect(
-                        cameraImage,
-                        Skia.XYWHRect(0, 0, cameraImage.width(), cameraImage.height()),
-                        cameraRect,
-                        Skia.Paint()
-                    );
-
-                    const overlayPaint = Skia.Paint();
-                    overlayPaint.setAlphaf(0.98);
-                    canvas.drawImageRect(
-                        overlaySkiaImage,
-                        Skia.XYWHRect(0, 0, overlaySkiaImage.width(), overlaySkiaImage.height()),
-                        cameraRect,
-                        overlayPaint
-                    );
-
-                    const snapshot = surface.makeImageSnapshot();
-                    const base64 = snapshot.encodeToBase64();
-                    const compositeUri = `data:image/png;base64,${base64}`;
-
-                    setCapturedImage(compositeUri);
-                } catch (compositeError) {
-                    console.error('Composite error:', compositeError);
-                    setCapturedImage(cameraUri);
-                }
-            } else {
-                setCapturedImage(cameraUri);
-            }
-
+            setCapturedImage(cameraUri);
             setIsPreviewMode(true);
+
+            // Generate a lightweight thumbnail asynchronously for the filters 
+            // so 10 filters don't parse the 12MP image synchronously and freeze Android JS thread
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    applyFilterToImage(cameraUri, 'none', 300).then(uri => {
+                        setThumbnailUri(uri);
+                    }).catch(err => console.error('Thumbnail generation error:', err));
+                }, 50);
+            });
         } catch (err: any) {
             console.error('Capture error:', err);
             Alert.alert("Error", err?.message || "Failed to take photo. Please try again.");
@@ -249,6 +183,7 @@ const TakePictureScreen = () => {
     const handleRetake = () => {
         setIsPreviewMode(false);
         setCapturedImage(null);
+        setThumbnailUri(null);
         setSelectedFilter('none');
     };
 
@@ -302,13 +237,18 @@ const TakePictureScreen = () => {
         }
     };
 
-    // Save — bakes the selected filter into the image before uploading
+    // Save — composites overlay and bakes the selected filter into the image before uploading
     const handleSave = async () => {
         if (!capturedImage) return;
         try {
             setLoading(true);
-            // Apply filter at native resolution (returns data URI with filter baked in)
-            const filteredUri = await applyFilterToImage(capturedImage, selectedFilter);
+
+            // Yield the thread so React Native can draw the ActivityIndicator on screen immediately
+            // before the synchronous Skia computations freeze the thread for 1 second.
+            await new Promise<void>(resolve => setTimeout(resolve, 50));
+
+            // Apply filter and overlay Native-side at native resolution (returns data URI with composition baked in)
+            const filteredUri = await applyFilterToImage(capturedImage, selectedFilter, undefined, imageOverlay);
             const randomName = `photo_${Math.random().toString(36).substring(2, 10)}.png`;
             const file = await dataURLtoFile(filteredUri, randomName);
             await uploadPhoto(file, filteredUri);
@@ -323,31 +263,10 @@ const TakePictureScreen = () => {
     // UI Render
     return (
         <SafeAreaView style={styles.container}>
-            {/* Popup message */}
-            {showClickAnywherePopup && !isPreviewMode && !hideButton && (
-                <Animated.View
-                    style={[
-                        styles.popup,
-                        {
-                            opacity: 0.97,
-                            top: hp(6),
-                            alignSelf: 'center',
-                        }
-                    ]}
-                >
-                    <View style={styles.popupBox}>
-                        <Text style={styles.popupText}>Click anywhere to take a picture</Text>
-                    </View>
-                </Animated.View>
-            )}
-
             {/* Camera Preview */}
-            <TouchableOpacity
-                ref={cameraViewRef}
+            <View
+                ref={cameraViewRef as any}
                 style={styles.previewContainer}
-                activeOpacity={1}
-                disabled={isPreviewMode}
-                onPress={handleCameraScreenPress}
             >
                 {/* Loader for overlay loading */}
                 {overlayLoading && !isPreviewMode && (
@@ -443,7 +362,7 @@ const TakePictureScreen = () => {
                         )}
                     </View>
                 )}
-            </TouchableOpacity>
+            </View>
 
             {/* Preview & Filters Modal */}
             {isPreviewMode && capturedImage && (
@@ -455,7 +374,20 @@ const TakePictureScreen = () => {
                             style={styles.capturedImage}
                             filterName={selectedFilter}
                             fit="cover"
+                            maxSize={selectedFilter === 'none' ? undefined : 1200}
                         />
+
+                        {/* Overlay separately layered on top, so it renders instantly via RN Views instead of merging 12 MP Skia Canvas on frame 1 */}
+                        {!!imageOverlay && (
+                            <View style={styles.overlayContainer}>
+                                <SkiaFilteredImage
+                                    uri={imageOverlay}
+                                    style={styles.overlayImage as any}
+                                    filterName={selectedFilter}
+                                    fit={"stretch" as any}
+                                />
+                            </View>
+                        )}
                     </View>
 
                     {/* Filter carousel - positioned at bottom */}
@@ -474,19 +406,41 @@ const TakePictureScreen = () => {
                                     onPress={() => setSelectedFilter(filter.name)}
                                     style={[
                                         styles.filterThumb,
-                                        isSelected && styles.filterSelected,
                                         { marginLeft: idx === 0 ? wp(8) : 0 }
                                     ]}
                                 >
-                                    <SkiaFilteredImage
-                                        uri={capturedImage}
-                                        style={[
-                                            styles.filterThumbImgWrap,
-                                            isSelected ? styles.filterSelectedImg : {},
-                                        ] as any}
-                                        filterName={filter.name}
-                                        fit="cover"
-                                    />
+                                    <View style={[styles.filterThumbImgContainer, isSelected && styles.filterThumbImgContainerSelected]}>
+                                        {thumbnailUri || filter.name === 'none' ? (
+                                            <SkiaFilteredImage
+                                                uri={thumbnailUri || capturedImage}
+                                                style={[
+                                                    styles.filterThumbImgWrap,
+                                                    isSelected ? styles.filterSelectedImg : {},
+                                                ] as any}
+                                                filterName={filter.name}
+                                                fit="cover"
+                                                maxSize={filter.name === 'none' ? undefined : 200}
+                                            />
+                                        ) : (
+                                            <View style={[
+                                                styles.filterThumbImgWrap,
+                                                isSelected ? styles.filterSelectedImg : {},
+                                                { backgroundColor: '#222' }
+                                            ]} />
+                                        )}
+                                        {/* Overlay layered on top with absolute position, for zero-delay thumbnail overlay display, now supporting filters as well! */}
+                                        {!!imageOverlay && (thumbnailUri || filter.name === 'none') && (
+                                            <View style={[StyleSheet.absoluteFill, { zIndex: 5, borderRadius: wp(8), overflow: 'hidden' }]}>
+                                                <SkiaFilteredImage
+                                                    uri={imageOverlay}
+                                                    style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }] as any}
+                                                    filterName={filter.name}
+                                                    fit="stretch"
+                                                    maxSize={200}
+                                                />
+                                            </View>
+                                        )}
+                                    </View>
                                     <Text style={styles.filterLabel}>{filter.label}</Text>
                                 </TouchableOpacity>
                             );
@@ -690,19 +644,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginHorizontal: wp(1),
     },
-    filterSelected: {
+    filterThumbImgContainer: {
+        marginBottom: hp(1),
+        borderRadius: wp(8),
+    },
+    filterThumbImgContainerSelected: {
         shadowColor: '#00ff88',
         shadowOpacity: 0.55,
         shadowRadius: 8,
         borderWidth: 3,
         borderColor: '#00ff88',
-        borderRadius: wp(8),
+        borderRadius: wp(9),
     },
     filterThumbImgWrap: {
         width: wp(12),
         height: wp(12),
         borderRadius: wp(8),
-        marginBottom: hp(1),
         overflow: 'hidden',
     },
     filterPreviewImg: {

@@ -28,7 +28,7 @@ const CreateEventSecondStep: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
     const [selectedStorage, setSelectedStorage] = useState<any>();
-    const [showPhotoPerguest, setShowPhotoPerguest] = useState<boolean>(true);
+    const [showPhotoPerguest, setShowPhotoPerguest] = useState<boolean>(false);
     const { step2Data, updateStep2Data } = useCreateEvent();
 
     // Get edit parameter from route params
@@ -76,7 +76,7 @@ const CreateEventSecondStep: React.FC = () => {
                         basePlan: defaultPlan.price,
                         guestLimit: defaultPlan.guestLimit,
                         photoPool: defaultPlan.photoPool,
-                        photosPerGuest: getRoundedPhotosPerGuest(defaultPlan.photoPool, defaultPlan.guestLimit),
+                        photosPerGuest: 0,
                         storageDays: defaultPlan.defaultStorageDays,
                         permissions: {
                             canViewGallery: true,
@@ -289,6 +289,7 @@ const CreateEventSecondStep: React.FC = () => {
         setSelectedPlan(plan);
         // Reset add-ons when changing base plan
         setSelectedAddonIds([]);
+        setShowPhotoPerguest(false);
 
         // Use updatePlanData with plan override to ensure prices are calculated correctly
         updatePlanData({
@@ -296,7 +297,7 @@ const CreateEventSecondStep: React.FC = () => {
             basePlan: plan.price,
             guestLimit: plan.guestLimit,
             photoPool: plan.photoPool,
-            photosPerGuest: getRoundedPhotosPerGuest(plan.photoPool, plan.guestLimit),
+            photosPerGuest: 0,
             storageDays: plan.defaultStorageDays,
             permissions: {
                 canViewGallery: true,
@@ -594,159 +595,160 @@ const CreateEventSecondStep: React.FC = () => {
                     {/* {guestPhotosOpen && (
                         <View style={styles.guestPhotosContent}> */}
                     {/* Guest Limit & Shared Photo Pool */}
-
-                    {/* <View style={styles.countersRow}>
-                                <View style={styles.counterContainer}> */}
-
-
-                    {/* <View style={styles.counterHeader}>
-                                        <Text style={styles.counterLabel}>Guest Limit</Text>
-                                        <Text style={styles.counterPrice}>
-                                            ${formatPrice(step2Data.plan.guestLimitPrice || 0)}
-                                        </Text>
-                                    </View> */}
-                    {/*     <View style={styles.counterControls}>
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.counterButton,
-                                                (step2Data.plan.guestLimit <= (selectedPlan?.guestLimit || 1)) && styles.counterButtonDisabled
-                                            ]}
-                                            onPress={() => {
-                                                if (step2Data.plan.guestLimit > (selectedPlan?.guestLimit || 1)) {
-                                                    updatePlanData({ guestLimit: step2Data.plan.guestLimit - 1 });
-                                                }
-                                            }}
-                                            disabled={step2Data.plan.guestLimit <= (selectedPlan?.guestLimit || 1) || isEditMode}
-                                        >
-                                            <Text style={[styles.counterButtonText, styles.counterButtonTextDecrement]}>-</Text>
-                                        </TouchableOpacity>
-                                        <View style={styles.counterValue}>
-                                            <Text style={styles.counterValueText} numberOfLines={1}>{step2Data.plan.guestLimit}</Text>
-                                        </View>
-                                        <TouchableOpacity
-                                            style={styles.counterButton}
-                                            onPress={() => updatePlanData({ guestLimit: step2Data.plan.guestLimit + 1 })}
-                                            disabled={isEditMode}
-                                        >
-                                            <Text style={[styles.counterButtonText, styles.counterButtonTextIncrement]}>+</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                               */}
-                    {/* </View>
-                                <View style={styles.counterContainer}> */}
+                    {/* 
+                    <View style={styles.countersRow}>
+                        <View style={styles.counterContainer}>
 
 
-                    {/* <View style={styles.counterHeader}>
-                                        <Text style={styles.counterLabel}>Shared Photo Pool</Text>
-                                        <Text style={styles.counterPrice}>
-                                            ${formatPrice(step2Data.plan.photoPoolPrice || 0)}
-                                        </Text>
-                                    </View> */}
-                    {/* <View style={styles.counterControls}>
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.counterButton,
-                                                (step2Data.plan.photoPool <= (selectedPlan?.photoPool || 1)) && styles.counterButtonDisabled
-                                            ]}
-                                            onPress={() => {
-                                                if (step2Data.plan.photoPool > (selectedPlan?.photoPool || 1)) {
-                                                    updatePlanData({ photoPool: Math.max(1, step2Data.plan.photoPool - 1) });
-                                                }
-                                            }}
-                                            disabled={step2Data.plan.photoPool <= (selectedPlan?.photoPool || 1) || isEditMode}
-                                        >
-                                            <Text style={[styles.counterButtonText, styles.counterButtonTextDecrement]}>-</Text>
-                                        </TouchableOpacity>
-                                        <View style={styles.counterValue}>
-                                            <Text style={styles.counterValueText} numberOfLines={1}>{step2Data.plan.photoPool}</Text>
-                                        </View>
-                                        <TouchableOpacity
-                                            style={styles.counterButton}
-                                            onPress={() => updatePlanData({ photoPool: step2Data.plan.photoPool + 1 })}
-                                            disabled={isEditMode}
-                                        >
-                                            <Text style={[styles.counterButtonText, styles.counterButtonTextIncrement]}>+</Text>
-                                        </TouchableOpacity>
-                                    </View> */}
-
-
-                    {/* </View>
-                            </View> */}
-
-                    {/* <View style={styles.photoLimitToggleContainer}>
-                                <View style={styles.photoLimitToggleTextContainer}>
-                                    <Text style={styles.toggleLabel}>Limit Photos Per Guest?</Text>
-                                    <Text style={styles.toggleSubLabel}>Set a maximum upload limit per individual guest</Text>
-                                </View>
-                                <ToggleSwitch
-                                    checked={showPhotoPerguest}
-                                    onChange={(checked) => {
-                                        if (checked) {
-                                            setShowPhotoPerguest(true)
-                                            updatePlanData({
-                                                photosPerGuest: 1
-                                            });
-                                        } else {
-                                            setShowPhotoPerguest(!showPhotoPerguest)
-                                            updatePlanData({
-                                                photosPerGuest: 0
-                                            });
+                            <View style={styles.counterHeader}>
+                                <Text style={styles.counterLabel}>Guest Limit</Text>
+                                <Text style={styles.counterPrice}>
+                                    ${formatPrice(step2Data.plan.guestLimitPrice || 0)}
+                                </Text>
+                            </View>
+                            <View style={styles.counterControls}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.counterButton,
+                                        (step2Data.plan.guestLimit <= (selectedPlan?.guestLimit || 1)) && styles.counterButtonDisabled
+                                    ]}
+                                    onPress={() => {
+                                        if (step2Data.plan.guestLimit > (selectedPlan?.guestLimit || 1)) {
+                                            updatePlanData({ guestLimit: step2Data.plan.guestLimit - 1 });
                                         }
                                     }}
-                                />
-                            </View> */}
-                    {/* Photos Per Guest Input */}
-                    {/* {showPhotoPerguest && (
-                                <View style={styles.photosPerGuestSection}>
-                                    <Text style={styles.photosPerGuestLabel}>Photos Per Guest</Text>
-                                    {(() => {
-                                        // Calculate the maximum photos per guest allowed
-                                        const maxPhotosPerGuest = step2Data.plan.photoPool;
-                                        return (
-                                            <>
-                                                <View style={styles.photosPerGuestControls}>
-                                                    <TouchableOpacity
-                                                        style={styles.photosPerGuestButton}
-                                                        onPress={() => updatePlanData({ photosPerGuest: Math.max(1, step2Data.plan.photosPerGuest - 1) })}
-                                                        disabled={step2Data.plan.photosPerGuest <= 1}
-                                                    >
-                                                        <Text style={styles.photosPerGuestButtonText}>-</Text>
-                                                    </TouchableOpacity>
-                                                    <TextInput
-                                                        style={styles.photosPerGuestInput}
-                                                        value={step2Data.plan.photosPerGuest === 0 ? "" : String(step2Data.plan.photosPerGuest)}
-                                                        onChangeText={(val) => {
-                                                            // allow empty string so user can clear field
-                                                            if (val === "") {
-                                                                updatePlanData({ photosPerGuest: 0 });
-                                                            } else {
-                                                                updatePlanData({ photosPerGuest: Number(val) });
-                                                            }
-                                                        }}
-                                                        keyboardType="number-pad"
-                                                        maxLength={5}
-                                                    />
-                                                    <TouchableOpacity
-                                                        style={styles.photosPerGuestButton}
-                                                        onPress={() => updatePlanData({ photosPerGuest: Math.min(step2Data.plan.photosPerGuest + 1, maxPhotosPerGuest) })}
-                                                        disabled={step2Data.plan.photosPerGuest >= maxPhotosPerGuest}
-                                                    >
-                                                        <Text style={[styles.photosPerGuestButtonText, styles.photosPerGuestButtonTextIncrement]}>+</Text>
-                                                    </TouchableOpacity>
-                                                </View>
-                                                {photosPerGuestError && (
-                                                    <Text style={styles.photosPerGuestError}>
-                                                        {photosPerGuestError}
-                                                    </Text>
-                                                )}
-                                                <Text style={styles.photosPerGuestHint}>
-                                                    {`Set a max upload per guest within the total photo pool (Max: ${maxPhotosPerGuest})`}
-                                                </Text>
-                                            </>
-                                        );
-                                    })()}
+                                    disabled={step2Data.plan.guestLimit <= (selectedPlan?.guestLimit || 1) || isEditMode}
+                                >
+                                    <Text style={[styles.counterButtonText, styles.counterButtonTextDecrement]}>-</Text>
+                                </TouchableOpacity>
+                                <View style={styles.counterValue}>
+                                    <Text style={styles.counterValueText} numberOfLines={1}>{step2Data.plan.guestLimit}</Text>
                                 </View>
-                            )} */}
+                                <TouchableOpacity
+                                    style={styles.counterButton}
+                                    onPress={() => updatePlanData({ guestLimit: step2Data.plan.guestLimit + 1 })}
+                                    disabled={isEditMode}
+                                >
+                                    <Text style={[styles.counterButtonText, styles.counterButtonTextIncrement]}>+</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                        </View>
+                        <View style={styles.counterContainer}>
+
+                            <View style={styles.counterHeader}>
+                                <Text style={styles.counterLabel}>Shared Photo Pool</Text>
+                                <Text style={styles.counterPrice}>
+                                    ${formatPrice(step2Data.plan.photoPoolPrice || 0)}
+                                </Text>
+                            </View>
+                            <View style={styles.counterControls}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.counterButton,
+                                        (step2Data.plan.photoPool <= (selectedPlan?.photoPool || 1)) && styles.counterButtonDisabled
+                                    ]}
+                                    onPress={() => {
+                                        if (step2Data.plan.photoPool > (selectedPlan?.photoPool || 1)) {
+                                            updatePlanData({ photoPool: Math.max(1, step2Data.plan.photoPool - 1) });
+                                        }
+                                    }}
+                                    disabled={step2Data.plan.photoPool <= (selectedPlan?.photoPool || 1) || isEditMode}
+                                >
+                                    <Text style={[styles.counterButtonText, styles.counterButtonTextDecrement]}>-</Text>
+                                </TouchableOpacity>
+                                <View style={styles.counterValue}>
+                                    <Text style={styles.counterValueText} numberOfLines={1}>{step2Data.plan.photoPool}</Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.counterButton}
+                                    onPress={() => updatePlanData({ photoPool: step2Data.plan.photoPool + 1 })}
+                                    disabled={isEditMode}
+                                >
+                                    <Text style={[styles.counterButtonText, styles.counterButtonTextIncrement]}>+</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View> */}
+
+                    <View style={styles.photoLimitToggleContainer}>
+                        <View style={styles.photoLimitToggleTextContainer}>
+                            <Text style={styles.toggleLabel}>Limit Photos Per Guest?</Text>
+                            <Text style={styles.toggleSubLabel}>Set a maximum upload limit per individual guest</Text>
+                        </View>
+                        <ToggleSwitch
+                            checked={showPhotoPerguest}
+                            onChange={(checked) => {
+                                if (checked) {
+                                    setShowPhotoPerguest(true)
+                                    updatePlanData({
+                                        photosPerGuest: 1
+                                    });
+                                } else {
+                                    setShowPhotoPerguest(!showPhotoPerguest)
+                                    updatePlanData({
+                                        photosPerGuest: 0
+                                    });
+                                }
+                            }}
+                        />
+                    </View>
+                    {/* Photos Per Guest Input */}
+                    {showPhotoPerguest && (
+                        <View style={styles.photosPerGuestSection}>
+                            <Text style={styles.photosPerGuestLabel}>Photos Per Guest</Text>
+                            {(() => {
+                                // Calculate the maximum photos per guest allowed
+                                const maxPhotosPerGuest = step2Data.plan.photoPool;
+                                return (
+                                    <>
+                                        <View style={styles.photosPerGuestControls}>
+                                            <TouchableOpacity
+                                                style={styles.photosPerGuestButton}
+                                                onPress={() => updatePlanData({ photosPerGuest: Math.max(1, step2Data.plan.photosPerGuest - 1) })}
+                                                disabled={step2Data.plan.photosPerGuest <= 1}
+                                            >
+                                                <Text style={styles.photosPerGuestButtonText}>-</Text>
+                                            </TouchableOpacity>
+                                            <TextInput
+                                                style={styles.photosPerGuestInput}
+                                                value={step2Data.plan.photosPerGuest === 0 ? "" : String(step2Data.plan.photosPerGuest)}
+                                                onChangeText={(val) => {
+                                                    // allow empty string so user can clear field
+                                                    if (val === "") {
+                                                        updatePlanData({ photosPerGuest: 0 });
+                                                    } else {
+                                                        updatePlanData({ photosPerGuest: Number(val) });
+                                                    }
+                                                }}
+                                                keyboardType="number-pad"
+                                                maxLength={5}
+                                            />
+                                            <TouchableOpacity
+                                                style={styles.photosPerGuestButton}
+                                                onPress={() => {
+                                                    console.log('maxPhotosPerGuest', maxPhotosPerGuest);
+                                                    console.log('step2Data.plan.photosPerGuest', step2Data.plan.photosPerGuest);
+                                                    updatePlanData({ photosPerGuest: Math.min(step2Data.plan.photosPerGuest + 1, maxPhotosPerGuest) })
+                                                }}
+                                                disabled={step2Data.plan.photosPerGuest >= maxPhotosPerGuest}
+                                            >
+                                                <Text style={[styles.photosPerGuestButtonText, styles.photosPerGuestButtonTextIncrement]}>+</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                        {photosPerGuestError && (
+                                            <Text style={styles.photosPerGuestError}>
+                                                {photosPerGuestError}
+                                            </Text>
+                                        )}
+                                        <Text style={styles.photosPerGuestHint}>
+                                            {`Set a max upload per guest within the total photo pool (Max: ${maxPhotosPerGuest})`}
+                                        </Text>
+                                    </>
+                                );
+                            })()}
+                        </View>
+                    )}
                     {/* Storage Duration */}
                     {/* <View style={styles.storageDurationHeader}>
                                 <View>

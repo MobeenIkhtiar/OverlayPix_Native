@@ -2,24 +2,21 @@
  * SkiaFilteredImage.tsx
  *
  * A drop-in replacement for <Image> that applies CSS-equivalent filters
- * using Skia's ColorMatrix — giving pixel-perfect results identical to
- * the PWA on both iOS and Android.
+ * using Skia's imperative API — giving pixel-perfect results identical
+ * on both iOS and Android.
+ *
+ * Instead of relying on the declarative <Canvas>/<ColorMatrix> tree
+ * (which can render differently on Android vs iOS due to GPU compositing
+ * differences), we use Skia's offscreen surface to bake the filter into
+ * a base64 image and display it with a plain RN <Image>.
  *
  * Supported filterName values (matching FILTERS array):
  *   'none' | 'grayscale' | 'sepia' | 'invert' | 'contrast' |
  *   'brightness' | 'blur' | 'hue-rotate' | 'saturate' | 'warm' | 'cool'
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
-import {
-    BlurMask,
-    Canvas,
-    ColorMatrix,
-    Group,
-    Image as SkiaImage,
-    useImage,
-} from '@shopify/react-native-skia';
-import { getFilterMatrix } from './filterMatrices';
+import { applyFilterToImage } from './applySkiaFilter';
 
 interface SkiaFilteredImageProps {
     /** URI of the image to display */
@@ -29,7 +26,11 @@ interface SkiaFilteredImageProps {
     /** Filter name from FILTERS array, e.g. 'grayscale', 'warm', 'none' */
     filterName: string;
     /** Resize mode — same semantics as RN Image (default: 'cover') */
-    fit?: 'cover' | 'contain' | 'fill';
+    fit?: 'cover' | 'contain' | 'fill' | 'stretch';
+    /** Optional overlay to draw over the image Native-side */
+    overlayUri?: string | null;
+    /** Optional maximum dimension (width or height) to scale down to */
+    maxSize?: number;
 }
 
 const SkiaFilteredImage: React.FC<SkiaFilteredImageProps> = ({
@@ -37,59 +38,49 @@ const SkiaFilteredImage: React.FC<SkiaFilteredImageProps> = ({
     style,
     filterName,
     fit = 'cover',
+    overlayUri,
+    maxSize,
 }) => {
-    const image = useImage(uri || '');
-    const matrix = useMemo(() => getFilterMatrix(filterName), [filterName]);
+    const [filteredUri, setFilteredUri] = useState<string | null>(null);
 
-    const isNone = filterName === 'none';
-    const isBlur = filterName === 'blur';
+    useEffect(() => {
+        let cancelled = false;
 
-    // Skia Canvas requires numeric width/height — measure the container first
-    const [dims, setDims] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+        if (!uri) {
+            setFilteredUri(null);
+            return;
+        }
+
+        // For 'none' without a resize, just use the original
+        if (filterName === 'none' && !maxSize) {
+            setFilteredUri(uri);
+            return;
+        }
+
+        // Apply the filter using the same imperative Skia path
+        // that is used by applySkiaFilter.ts for saving — guaranteed
+        // to be identical on Android and iOS.
+        applyFilterToImage(uri, filterName, maxSize, overlayUri).then(result => {
+            if (!cancelled) {
+                setFilteredUri(result);
+            }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [uri, filterName, overlayUri, maxSize]);
 
     if (!uri) return <View style={style as any} />;
 
-    // Phase 1: measure the container with a regular Image placeholder
-    if (dims.w === 0 || dims.h === 0) {
-        return (
-            <View
-                style={style as any}
-                onLayout={e =>
-                    setDims({
-                        w: e.nativeEvent.layout.width,
-                        h: e.nativeEvent.layout.height,
-                    })
-                }
-            >
-                <Image
-                    source={{ uri }}
-                    style={StyleSheet.absoluteFill}
-                    resizeMode={fit as any}
-                />
-            </View>
-        );
-    }
-
-    // Phase 2: render with Skia once dimensions are known
     return (
-        <Canvas style={[style as any, { overflow: 'hidden' }]}>
-            <Group>
-                {/* Color matrix filters (all except blur) */}
-                {!isNone && !isBlur && <ColorMatrix matrix={matrix} />}
-
-                {/* Blur is a spatial filter — handled via BlurMask */}
-                {isBlur && <BlurMask blur={3} style="normal" respectCTM />}
-
-                <SkiaImage
-                    image={image}
-                    x={0}
-                    y={0}
-                    width={dims.w}
-                    height={dims.h}
-                    fit={fit}
-                />
-            </Group>
-        </Canvas>
+        <View style={style as any}>
+            <Image
+                source={{ uri: filteredUri || uri }}
+                style={StyleSheet.absoluteFill}
+                resizeMode={fit as any}
+            />
+        </View>
     );
 };
 

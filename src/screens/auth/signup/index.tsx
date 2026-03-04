@@ -192,7 +192,7 @@ const Signup: React.FC = () => {
 
                 // If isGuest is true, redirect to terms and conditions page with shareId
                 if (shareId) {
-                    safeNavigate('TermsAndPolicy', { shareId });
+                    safeNavigate('termsAndPolicy', { shareId });
                     return;
                 } else {
                     // Check if user already exists and has a role
@@ -246,7 +246,7 @@ const Signup: React.FC = () => {
 
                 // If isGuest is true, redirect to terms and conditions page with shareId
                 if (shareId) {
-                    safeNavigate('TermsAndPolicy', { shareId });
+                    safeNavigate('termsAndPolicy', { shareId });
                     return;
                 } else {
                     // Check if user already exists and has a role
@@ -300,7 +300,7 @@ const Signup: React.FC = () => {
 
                 // If isGuest is true, redirect to terms and conditions page with shareId
                 if (shareId) {
-                    safeNavigate('TermsAndPolicy', { shareId });
+                    safeNavigate('termsAndPolicy', { shareId });
                     return;
                 } else {
                     // Check if user already exists and has a role

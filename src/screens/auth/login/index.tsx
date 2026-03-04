@@ -62,9 +62,9 @@ const Login: React.FC = () => {
         let routeName = '';
         let routeParams = params || {};
         if (path.startsWith('/dashboard')) routeName = 'dashboard';
-        else if (path.startsWith('/joinedEvent')) routeName = 'JoinedEvent';
+        else if (path.startsWith('/joinedEvent')) routeName = 'joinedEvent';
         else if (path.startsWith('/termsAndPolicy/')) {
-            routeName = 'TermsAndPolicy';
+            routeName = 'termsAndPolicy';
             routeParams = { ...routeParams, shareId: path.split('/').pop() };
         }
         else if (path.startsWith('/forgotPassword')) routeName = 'ForgotPassword';

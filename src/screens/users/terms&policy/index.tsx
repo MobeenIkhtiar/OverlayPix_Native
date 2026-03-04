@@ -136,7 +136,7 @@ const TermsAndPolicy: React.FC = () => {
 
     // Fallbacks if eventData is not loaded
     const eventName = eventData?.eventName || "Event";
-    const hostName = eventData?.ownerName || "Event Host";
+    const hostName = eventData?.hostName ? eventData?.hostName : eventData?.ownerName || "Event Host";
     const totalPictures = eventData?.guestPicturesLeft ?? 0;
     const maxPictures = eventData?.guestPicturesMax ?? 0;
 
@@ -186,7 +186,7 @@ const TermsAndPolicy: React.FC = () => {
                             styles.eventName,
                             {
                                 color: eventData?.brandColor || "#666666",
-                                fontSize: eventData?.fontSize || wp(4.5),
+                                fontSize: eventData?.fontSize ? Number(eventData.fontSize) : wp(4.5),
                                 fontWeight: (eventData?.fontStyle as any) || "500",
                                 fontFamily: eventData?.typography || undefined,
                             }
