@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Animated, Platform, Alert, ScrollView, ActivityIndicator } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Camera, useCameraDevice, CameraPermissionStatus } from 'react-native-vision-camera';
 import { Canvas, Image as SkiaImage, useImage, makeImageFromView, Skia } from '@shopify/react-native-skia';
 import Loader from '../../../components/Loader';
 import { guestServices } from '../../../services/guestsService';
 import { HEIGHT, hp, wp } from '../../../contants/StyleGuide';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SwitchCamera } from 'lucide-react-native';
 
 import { FILTERS } from './filterMatrices';
 import SkiaFilteredImage from './SkiaFilteredImage';
@@ -40,9 +41,10 @@ const TakePictureScreen = () => {
     const [frameRect, setFrameRect] = useState<{ left: number, top: number, width: number, height: number }>({ left: 0, top: 0, width: 0, height: 0 });
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [hideButton, setHideButton] = useState<boolean>(false);
+    const [cameraPosition, setCameraPosition] = useState<'back' | 'front'>('back');
 
     // Camera device (v4 API)
-    const device = useCameraDevice('back');
+    const device = useCameraDevice(cameraPosition);
 
     // Request camera permissions
     useEffect(() => {
@@ -109,6 +111,17 @@ const TakePictureScreen = () => {
         return () => { isMounted = false; };
     }, [overlayUrl]);
 
+    // Reset captured photo state when screen comes back into focus
+    // (e.g. when user presses "Take Another Photo" from the photoSaved screen)
+    useFocusEffect(
+        React.useCallback(() => {
+            setCapturedImage(null);
+            setThumbnailUri(null);
+            setIsPreviewMode(false);
+            setSelectedFilter('none');
+        }, [])
+    );
+
     // Frame calculation for overlay/filter area
     useEffect(() => {
         const { width, height } = Dimensions.get('window');
@@ -122,6 +135,13 @@ const TakePictureScreen = () => {
     };
 
     const turnOffFlash = async () => setFlashOn(false);
+
+    // Switch between front and back camera
+    const handleSwitchCamera = () => {
+        setCameraPosition((prev) => (prev === 'back' ? 'front' : 'back'));
+        setFlashOn(false); // front cameras don't support torch
+        setIsCameraReady(false);
+    };
 
     // Capture handling with Skia for proper transparency
     const handleCapture = async () => {
@@ -275,13 +295,13 @@ const TakePictureScreen = () => {
                     </View>
                 )}
 
-                {/* Flash Button */}
+                {/* Flash Button + Switch Camera Button */}
                 {!isPreviewMode && !hideButton && (
                     <View style={styles.flashButtonContainer}>
                         <TouchableOpacity
                             onPress={handleToggleFlash}
-                            disabled={!flashSupported}
-                            style={[styles.flashButton, !flashSupported && styles.disabledFlashButton]}
+                            disabled={!flashSupported || cameraPosition === 'front'}
+                            style={[styles.flashButton, (!flashSupported || cameraPosition === 'front') && styles.disabledFlashButton]}
                         >
                             <Text>
                                 {flashOn ? "⚡" : "⚡︎"}
@@ -290,6 +310,12 @@ const TakePictureScreen = () => {
                         {flashError && (
                             <Text style={styles.flashError}>{flashError}</Text>
                         )}
+                        <TouchableOpacity
+                            onPress={handleSwitchCamera}
+                            style={styles.switchCameraButton}
+                        >
+                            <SwitchCamera size={wp(5.5)} color="#fff" />
+                        </TouchableOpacity>
                     </View>
                 )}
 
@@ -526,8 +552,18 @@ const styles = StyleSheet.create({
         zIndex: 200,
         flexDirection: 'row',
         alignItems: 'center',
+        gap: wp(2),
     },
     flashButton: {
+        padding: wp(2.2),
+        borderRadius: wp(7),
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    switchCameraButton: {
         padding: wp(2.2),
         borderRadius: wp(7),
         backgroundColor: 'rgba(0,0,0,0.4)',

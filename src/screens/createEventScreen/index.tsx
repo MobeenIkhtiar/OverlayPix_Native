@@ -18,7 +18,8 @@ import {
     Image,
     Pressable,
     FlatList,
-    Switch
+    Switch,
+    Dimensions
 } from 'react-native';
 import Header from '../../components/Header';
 import Stepper from '../../components/Stepper';
@@ -26,6 +27,14 @@ import OverlaySelector from '../../components/OverlaySelector';
 import OverlayGuidelinesModal from '../../components/OverlayGuidelinesModal';
 import { hp, wp } from '../../contants/StyleGuide';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Returns a responsive calendar width capped at 480px for large screens (iPad)
+const getCalendarWidth = () => {
+    const screenWidth = Dimensions.get('window').width;
+    const MAX_CALENDAR_WIDTH = 480;
+    const calculatedWidth = screenWidth * 0.88;
+    return Math.min(calculatedWidth, MAX_CALENDAR_WIDTH);
+};
 
 // Updated event type list with "other" option
 const EVENT_TYPES = [
@@ -139,6 +148,13 @@ const CreateEventScreen: React.FC = () => {
             setCustomEventType(step1Data.type);
         }
     }, [step1Data.type, updateStep1Data]);
+
+    // Keep eventDate in sync with step1Data.date (important for edit mode where data loads async)
+    useEffect(() => {
+        if (step1Data.date) {
+            setEventDate(new Date(step1Data.date));
+        }
+    }, [step1Data.date]);
 
     // Keep overlayNameValue in sync with step1Data.overlayName
     useEffect(() => {
@@ -278,12 +294,24 @@ const CreateEventScreen: React.FC = () => {
     }, [is24Hours, startTime, eventDate]);
 
     // Keep startTime and endTime in sync with step1Data (for controlled select)
+    // Also detect if the loaded event was a 24h event and restore is24Hours toggle
     useEffect(() => {
+        const newStart = step1Data.startTime || "";
+        const newEnd = step1Data.endTime || "";
+
         if (step1Data.startTime !== startTime) {
-            setStartTime(step1Data.startTime || "");
+            setStartTime(newStart);
         }
         if (step1Data.endTime !== endTime) {
-            setEndTime(step1Data.endTime || "");
+            setEndTime(newEnd);
+        }
+
+        // Detect 24h event on edit load: endTime === startTime + 23h59m
+        if (newStart && newEnd) {
+            const expected24hEnd = addMinutes(newStart, 24 * 60 - 1);
+            if (newEnd === expected24hEnd) {
+                setIs24Hours(true);
+            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [step1Data.startTime, step1Data.endTime]);
@@ -622,7 +650,7 @@ const CreateEventScreen: React.FC = () => {
                                                 <CalendarPicker
                                                     selectedStartDate={eventDate || undefined}
                                                     minDate={new Date(new Date().setHours(0, 0, 0, 0))}
-                                                    width={wp(90)}
+                                                    width={getCalendarWidth()}
                                                     onDateChange={(date: Date) => {
                                                         if (!date) return;
 
@@ -1148,8 +1176,8 @@ const styles = StyleSheet.create({
         borderRadius: wp(4),
         paddingVertical: hp(2),
         paddingHorizontal: wp(2),
-        width: '90%',
-        maxWidth: 420,
+        width: getCalendarWidth() + wp(4),
+        alignSelf: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,

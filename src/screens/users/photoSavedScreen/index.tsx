@@ -55,74 +55,73 @@ const PhotoSavedScreen = () => {
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView style={{ flex: 1 }}>
-            {/* Logo and App Name */}
-            <View style={styles.header}>
-                <Image source={icons.logo} style={styles.logo} resizeMode="contain" />
-                <Text style={styles.appName}>Overlay Pix</Text>
-                <Text style={styles.photoSaved}>Photo Saved!!</Text>
-            </View>
-
-            {/* Photo Preview */}
-            <View style={styles.photoPreviewContainer}>
-                <Image
-                    source={typeof photo === 'string' ? { uri: photo } : photo}
-                    style={styles.photoPreview}
-                    resizeMode="stretch"
-                />
-            </View>
-
-            {/* Progress and Success Message (Animated) */}
-            <Animated.View style={[styles.progressBox, { opacity: fadeAnim }]}>
-                <View style={styles.progressHeader}>
-                    <Text style={styles.progressHeaderText}>Completed</Text>
-                    <Text style={styles.progressHeaderText}>100%</Text>
+                {/* Logo and App Name */}
+                <View style={styles.header}>
+                    <Image source={icons.logo} style={styles.logo} resizeMode="contain" />
+                    <Text style={styles.appName}>Overlay Pix</Text>
+                    <Text style={styles.photoSaved}>Photo Saved!!</Text>
                 </View>
-                {/* Animated Progress Bar */}
-                <View style={styles.progressBarBackground}>
-                    <Animated.View
-                        style={[
-                            styles.progressBar,
-                            { width: progressBarWidth }
-                        ]}
+
+                {/* Photo Preview */}
+                <View style={styles.photoPreviewContainer}>
+                    <Image
+                        source={typeof photo === 'string' ? { uri: photo } : photo}
+                        style={styles.photoPreview}
+                        resizeMode="stretch"
                     />
                 </View>
-                
-                {/* Animated Success Message */}
-                <Animated.View
-                    style={[
-                        styles.successMsgRow,
-                        {
-                            transform: [{ scale: bounceAnim }],
-                            opacity: bounceAnim,
-                        },
-                    ]}
-                >
-                    {/* Check SVG as RN icon workaround: Use Emoji or custom SVG if needed */}
-                    <Text style={styles.successIcon}>✅</Text>
-                    <Animated.Text style={[styles.successText, { opacity: opacityAnim }]}>
-                        Successfully Saved!
-                    </Animated.Text>
-                </Animated.View>
-            </Animated.View>
 
-            {/* Buttons */}
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                    onPress={() =>
-                        navigation.navigate('userGallery', { eventId, fromDashboard, fromScreen: 'photoSaved' })
-                    }
-                    style={styles.galleryButton}
-                >
-                    <Text style={styles.galleryButtonText}>View Gallery</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={styles.disabledButton}
-                    disabled={true}
-                >
-                    <Text style={styles.disabledButtonText}>Take Another Photo</Text>
-                </TouchableOpacity>
-            </View>
+                {/* Progress and Success Message (Animated) */}
+                <Animated.View style={[styles.progressBox, { opacity: fadeAnim }]}>
+                    <View style={styles.progressHeader}>
+                        <Text style={styles.progressHeaderText}>Completed</Text>
+                        <Text style={styles.progressHeaderText}>100%</Text>
+                    </View>
+                    {/* Animated Progress Bar */}
+                    <View style={styles.progressBarBackground}>
+                        <Animated.View
+                            style={[
+                                styles.progressBar,
+                                { width: progressBarWidth }
+                            ]}
+                        />
+                    </View>
+
+                    {/* Animated Success Message */}
+                    <Animated.View
+                        style={[
+                            styles.successMsgRow,
+                            {
+                                transform: [{ scale: bounceAnim }],
+                                opacity: bounceAnim,
+                            },
+                        ]}
+                    >
+                        {/* Check SVG as RN icon workaround: Use Emoji or custom SVG if needed */}
+                        <Text style={styles.successIcon}>✅</Text>
+                        <Animated.Text style={[styles.successText, { opacity: opacityAnim }]}>
+                            Successfully Saved!
+                        </Animated.Text>
+                    </Animated.View>
+                </Animated.View>
+
+                {/* Buttons */}
+                <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                        onPress={() =>
+                            navigation.navigate('userGallery', { eventId, fromDashboard, fromScreen: 'photoSaved' })
+                        }
+                        style={styles.galleryButton}
+                    >
+                        <Text style={styles.galleryButtonText}>View Gallery</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => navigation.goBack()}
+                        style={styles.disabledButton}
+                    >
+                        <Text style={styles.disabledButtonText}>Take Another Photo</Text>
+                    </TouchableOpacity>
+                </View>
             </ScrollView>
         </SafeAreaView>
     );
@@ -260,7 +259,7 @@ const styles = StyleSheet.create({
         opacity: 0.4,
     },
     disabledButtonText: {
-        color: '#C0BEBE',
+        color: '#000',
         fontSize: wp(4),
         fontWeight: '500',
     }

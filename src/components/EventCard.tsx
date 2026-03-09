@@ -143,8 +143,8 @@ const EventCard: React.FC<EventCardProps> = ({
                         label="View Images"
                         className="border-[0.5px] border-[#E6E6E6] px-5 text-[#666666] hover:bg-gray-50"
                         onClick={onViewImages}
-                        disabled={storageExpired}
-                    // disabled={true}
+                        // disabled={storageExpired}
+                        disabled={true}
                     />
                     <ActionButton
                         icon={SquarePen}

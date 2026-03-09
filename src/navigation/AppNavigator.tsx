@@ -26,8 +26,8 @@ const Stack = createStackNavigator();
 const AppNavigator = () => {
     return (
         <NavigationContainer>
-            <Stack.Navigator initialRouteName="onBoarding" screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="onBoarding" component={OnBoarding} />
+            <Stack.Navigator initialRouteName="login" screenOptions={{ headerShown: false }}>
+                {/* <Stack.Screen name="onBoarding" component={OnBoarding} /> */}
                 <Stack.Screen name="login" component={LoginScreen} />
                 <Stack.Screen name="signup" component={SignupScreen} />
                 <Stack.Screen name='forgotPassword' component={ForgotPassword} />

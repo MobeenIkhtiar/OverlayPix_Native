@@ -94,7 +94,8 @@ const JoinedEventCard: React.FC<EventCardProps> = ({
                         icon={Eye}
                         label="View Event"
                         onPress={onViewImages}
-                        disabled={storageExpired}
+                        // disabled={storageExpired}
+                        disabled={true}
                     />
                 </View>
             </View>

@@ -186,8 +186,8 @@ const InviteGuestEasily: React.FC = () => {
 
     const eventShareUrl = eventData?.shareCode
         ?
-        //  `https://overlaypix.com/termsAndPolicy/${eventData.shareCode}`
-        `http://192.168.100.108:5173/event/${eventData.shareCode}`
+        `https://overlaypix.com/termsAndPolicy/${eventData.shareCode}`
+        // `http://192.168.100.108:5173/event/${eventData.shareCode}`
         : '';
 
     if (loading) {
