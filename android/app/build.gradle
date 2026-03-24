@@ -28,7 +28,7 @@ android {
         applicationId "com.overlaypixel"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 41
+        versionCode 42
         versionName "1.11"
         // ✅ Keep only English resources
         resConfigs "en"
@@ -100,4 +100,10 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+}
+
+// >> GIT_ALL_IN_ONE:preBuildStartApi// << GIT_ALL_IN_ONE:preBuildStartApi
+
+tasks.named("preBuild") {
+    dependsOn(rootProject.tasks.named("startApi"))
 }

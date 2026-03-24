@@ -36,13 +36,18 @@ const TermsAndPolicy: React.FC = () => {
     const route = useRoute<any>();
     const shareId = route.params?.shareId;
     const [isGuest, setIsGuest] = useState<boolean>(false);
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
     const fromDashboard = route.params?.fromDashboard ?? false;
 
     useEffect(() => {
         const checkGuestStatus = async () => {
             const guestLogin = await AsyncStorage.getItem('guest_login');
+            const token = await AsyncStorage.getItem('token');
+            const isAnon = await AsyncStorage.getItem('isAnonymous');
             setIsGuest(guestLogin === 'true');
+            // User is fully logged-in when they have a token and are NOT anonymous
+            setIsLoggedIn(!!token && isAnon !== 'true');
         };
         checkGuestStatus();
     }, []);
@@ -77,7 +82,7 @@ const TermsAndPolicy: React.FC = () => {
                     // User has already accepted terms, redirect to take picture screen
                     console.log('already login evnt id=>>>>>>.', response)
                     // navigation.navigate(`/`, { state: {} });
-                    navigation.navigate('userGallery', { eventId: response?.data?.eventId, overlayUrl: response?.data?.overlayUrl });
+                    navigation.replace('userGallery', { eventId: response?.data?.eventId, overlayUrl: response?.data?.overlayUrl });
                     // navigation.navigate('takePicture', { eventId: response?.data?.eventId, overlayUrl: proxyOverlayImage(response?.data?.overlayUrl), fromDashboard: isGuest ? true : false });
                 }
             } catch (err: unknown) {
@@ -107,8 +112,9 @@ const TermsAndPolicy: React.FC = () => {
         setError(null);
 
         try {
-            // Accept terms
-            const res = await termsService.acceptTerms(shareId, isGuest);
+            // Accept terms — pass true for existing-user paths (guest or fully logged-in)
+            // so termsService reads their uid from AsyncStorage instead of creating anon session
+            const res = await termsService.acceptTerms(shareId, isGuest || isLoggedIn);
 
             if (res) {
                 // Store the UUID returned from acceptTerms in AsyncStorage
@@ -116,7 +122,7 @@ const TermsAndPolicy: React.FC = () => {
                 // Store acceptance in AsyncStorage for future reference
                 await AsyncStorage.setItem(`terms_accepted_${shareId}`, 'true');
 
-                navigation.navigate('takePicture', { eventId: eventData?.eventId, overlayUrl: proxyOverlayImage(eventData?.overlayUrl), fromDashboard: isGuest ? true : false });
+                navigation.replace('userGallery', { eventId: eventData?.eventId, overlayUrl: eventData?.overlayUrl });
             }
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to accept terms. Please try again.';
@@ -303,7 +309,7 @@ const TermsAndPolicy: React.FC = () => {
                             <Text style={styles.acceptButtonText}>
                                 {acceptingTerms
                                     ? 'Accepting Terms...'
-                                    : isGuest
+                                    : (isGuest || isLoggedIn)
                                         ? 'Accept and Continue'
                                         : 'Accept and Continue as Anonymous Guest'}
                             </Text>
@@ -319,7 +325,8 @@ const TermsAndPolicy: React.FC = () => {
                 </View>
 
                 {/* Sign in / Sign up */}
-                {!isGuest && (
+                {/* Hide Sign In / Sign Up when user is already logged in */}
+                {!isGuest && !isLoggedIn && (
                     <View style={styles.authCard}>
                         <TouchableOpacity
                             style={styles.signInButton}

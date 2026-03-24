@@ -54,7 +54,7 @@ const Login: React.FC = () => {
     };
 
     // Helper to navigate and replace history so user can't go back to login
-    const safeNavigate = (path: string, params?: any) => {
+    const safeNavigate = (path: string, params?: any, isReplace: boolean = false) => {
         // In react-navigation, you can use navigation.replace for replace: true
         // path is expected to be a route name, not a URL
         // We'll map the URLs to route names for navigation
@@ -73,7 +73,11 @@ const Login: React.FC = () => {
         else if (path.startsWith('/landingpage')) routeName = 'LandingPage';
         else routeName = path.replace(/^\//, '');
 
-        navigation.navigate(routeName, routeParams);
+        if (isReplace) {
+            navigation.replace(routeName, routeParams);
+        } else {
+            navigation.navigate(routeName, routeParams);
+        }
     };
 
     // AsyncStorage helpers
@@ -109,7 +113,7 @@ const Login: React.FC = () => {
                 return;
             }
             if (role === 'guest') {
-                safeNavigate('/joinedEvent');
+                safeNavigate('/joinedEvent', undefined, true);
                 return;
             }
         }
@@ -146,6 +150,10 @@ const Login: React.FC = () => {
                 setLoading(false);
                 return;
             }
+            // Clear any lingering anonymous event data
+            const { clearAnonymousEventData } = require('../../../utils/HelperFunctions');
+            await clearAnonymousEventData();
+
             // Save token and UID to AsyncStorage
             await setItem('token', token);
             await setItem('uid', user.uid);
@@ -159,17 +167,26 @@ const Login: React.FC = () => {
                 // setTimeout(() => setShowConversionBanner(false), 3000);
             }
 
+            if (isAnonymous) {
+                if (role === 'guest') {
+                    safeNavigate('/joinedEvent', undefined, true);
+                } else {
+                    navigation.replace('dashboard');
+                }
+                return;
+            }
+
             if (shareId && role === 'guest' && !isGuest) {
                 await removeItem('isAnonymous');
-                safeNavigate(`/termsAndPolicy/${shareId}`);
+                safeNavigate(`/termsAndPolicy/${shareId}`, undefined, true);
                 return;
             } else if (shareId && isGuest) {
                 await removeItem('isAnonymous');
-                safeNavigate(`/termsAndPolicy/${shareId}`);
+                safeNavigate(`/termsAndPolicy/${shareId}`, undefined, true);
                 return;
             }
             else if (role === 'guest' && !isGuest) {
-                safeNavigate('/joinedEvent');
+                safeNavigate('/joinedEvent', undefined, true);
                 return;
             } else {
                 navigation.replace('dashboard');
@@ -198,6 +215,10 @@ const Login: React.FC = () => {
             await setItem('guest_login', isGuest.toString());
 
             if (res && res.user) {
+                // Clear any lingering anonymous event data
+                const { clearAnonymousEventData } = require('../../../utils/HelperFunctions');
+                await clearAnonymousEventData();
+
                 await setItem('token', res.token);
                 await setItem('uid', res.user.uid);
 
@@ -210,20 +231,29 @@ const Login: React.FC = () => {
 
                 const role = await fetchUserRole(res.user.uid);
 
+                if (res.converted || isAnonymous) {
+                    if (role === 'guest') {
+                        safeNavigate('/joinedEvent', undefined, true);
+                    } else {
+                        safeNavigate('/dashboard', undefined, true);
+                    }
+                    return;
+                }
+
                 if (shareId && role === 'guest' && !isGuest) {
                     await removeItem('isAnonymous');
-                    safeNavigate(`/termsAndPolicy/${shareId}`);
+                    safeNavigate(`/termsAndPolicy/${shareId}`, undefined, true);
                     return;
                 } else if (shareId && isGuest) {
                     await removeItem('isAnonymous');
-                    safeNavigate(`/termsAndPolicy/${shareId}`);
+                    safeNavigate(`/termsAndPolicy/${shareId}`, undefined, true);
                     return;
                 }
                 else if (role === 'guest' && !isGuest) {
-                    safeNavigate('/joinedEvent');
+                    safeNavigate('/joinedEvent', undefined, true);
                     return;
                 } else {
-                    safeNavigate('/dashboard');
+                    safeNavigate('/dashboard', undefined, true);
                 }
             } else {
                 setError('Google login failed: No user returned.');
@@ -247,6 +277,10 @@ const Login: React.FC = () => {
             await setItem('guest_login', isGuest.toString());
 
             if (res && res.user) {
+                // Clear any lingering anonymous event data
+                const { clearAnonymousEventData } = require('../../../utils/HelperFunctions');
+                await clearAnonymousEventData();
+
                 await setItem('token', res.token);
                 await setItem('uid', res.user.uid);
 
@@ -259,20 +293,29 @@ const Login: React.FC = () => {
 
                 const role = await fetchUserRole(res.user.uid);
 
+                if (res.converted || isAnonymous) {
+                    if (role === 'guest') {
+                        safeNavigate('/joinedEvent', undefined, true);
+                    } else {
+                        safeNavigate('/dashboard', undefined, true);
+                    }
+                    return;
+                }
+
                 if (shareId && role === 'guest' && !isGuest) {
                     await removeItem('isAnonymous');
-                    safeNavigate(`/termsAndPolicy/${shareId}`);
+                    safeNavigate(`/termsAndPolicy/${shareId}`, undefined, true);
                     return;
                 } else if (shareId && isGuest) {
                     await removeItem('isAnonymous');
-                    safeNavigate(`/termsAndPolicy/${shareId}`);
+                    safeNavigate(`/termsAndPolicy/${shareId}`, undefined, true);
                     return;
                 }
                 else if (role === 'guest' && !isGuest) {
-                    safeNavigate('/joinedEvent');
+                    safeNavigate('/joinedEvent', undefined, true);
                     return;
                 } else {
-                    safeNavigate('/dashboard');
+                    safeNavigate('/dashboard', undefined, true);
                 }
             } else {
                 setError('Facebook login failed: No user returned.');
@@ -295,6 +338,10 @@ const Login: React.FC = () => {
             await setItem('guest_login', isGuest.toString());
 
             if (res && res.user) {
+                // Clear any lingering anonymous event data
+                const { clearAnonymousEventData } = require('../../../utils/HelperFunctions');
+                await clearAnonymousEventData();
+
                 await setItem('token', res.token);
                 await setItem('uid', res.user.uid);
 
@@ -309,18 +356,18 @@ const Login: React.FC = () => {
 
                 if (shareId && role === 'guest' && !isGuest) {
                     await removeItem('isAnonymous');
-                    safeNavigate(`/termsAndPolicy/${shareId}`);
+                    safeNavigate(`/termsAndPolicy/${shareId}`, undefined, true);
                     return;
                 } else if (shareId && isGuest) {
                     await removeItem('isAnonymous');
-                    safeNavigate(`/termsAndPolicy/${shareId}`);
+                    safeNavigate(`/termsAndPolicy/${shareId}`, undefined, true);
                     return;
                 }
                 else if (role === 'guest' && !isGuest) {
-                    safeNavigate('/joinedEvent');
+                    safeNavigate('/joinedEvent', undefined, true);
                     return;
                 } else {
-                    safeNavigate('/dashboard');
+                    safeNavigate('/dashboard', undefined, true);
                 }
             } else {
                 setError('apple login failed: No user returned.');
