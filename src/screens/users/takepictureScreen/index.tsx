@@ -11,7 +11,7 @@ import { SwitchCamera } from 'lucide-react-native';
 
 import { FILTERS } from './filterMatrices';
 import SkiaFilteredImage from './SkiaFilteredImage';
-import { applyFilterToImage } from './applySkiaFilter';
+import { applyFilterToImage, applyFilterToFile } from './applySkiaFilter';
 
 const TakePictureScreen = () => {
     const navigation: any = useNavigation();
@@ -267,11 +267,14 @@ const TakePictureScreen = () => {
             // before the synchronous Skia computations freeze the thread for 1 second.
             await new Promise<void>(resolve => setTimeout(resolve, 50));
 
-            // Apply filter and overlay Native-side at native resolution (returns data URI with composition baked in)
-            const filteredUri = await applyFilterToImage(capturedImage, selectedFilter, undefined, imageOverlay);
-            const randomName = `photo_${Math.random().toString(36).substring(2, 10)}.png`;
-            const file = await dataURLtoFile(filteredUri, randomName);
-            await uploadPhoto(file, filteredUri);
+            // Optimised path: render at capped resolution, encode as JPEG,
+            // write to a temp file — bypasses the huge base64 data URI pipeline.
+            const fileUri = await applyFilterToFile(capturedImage, selectedFilter, imageOverlay);
+            const randomName = `photo_${Math.random().toString(36).substring(2, 10)}.jpg`;
+
+            // Build the file object for FormData directly from the file URI
+            const file = { uri: fileUri, name: randomName, type: 'image/jpeg' };
+            await uploadPhoto(file, fileUri);
         } catch (err: any) {
             console.error('Save error:', err);
             Alert.alert('Error', err?.message || 'Failed to save photo.');
