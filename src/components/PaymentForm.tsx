@@ -130,17 +130,19 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                     <Text style={styles.label}>Payment Method</Text>
                     <View style={styles.iapMethodBox}>
                         <View style={styles.iapMethodContent}>
-                            <Image
-                                source={Platform.OS === 'ios' ? icons.applePay : icons.googlePay}
-                                style={styles.iapIcon}
-                                resizeMode="contain"
-                            />
+                            {Platform.OS === 'android' && (
+                                <Image
+                                    source={icons.googlePay}
+                                    style={styles.iapIcon}
+                                    resizeMode="contain"
+                                />
+                            )}
                             <View style={styles.iapTextContainer}>
                                 <Text style={styles.iapMethodText}>
-                                    {Platform.OS === 'ios' ? 'App Store' : 'Google Play'}
+                                    {Platform.OS === 'ios' ? 'In-App Purchase' : 'Google Play'}
                                 </Text>
                                 <Text style={styles.iapSubtext}>
-                                    Secure payment through {platformName}
+                                    {Platform.OS === 'ios' ? 'Secure payment through the App Store' : `Secure payment through ${platformName}`}
                                 </Text>
                             </View>
                         </View>

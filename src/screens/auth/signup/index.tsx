@@ -127,6 +127,10 @@ const Signup: React.FC = () => {
             // console.log('Firebase Signup response:', res.user);
 
             if (res) {
+                // Clear any lingering anonymous event data
+                const { clearAnonymousEventData } = require('../../../utils/HelperFunctions');
+                await clearAnonymousEventData();
+
                 // Store token and UID if user was converted or created
                 if (res.user) {
                     // await AsyncStorage.setItem('token', res.token);
@@ -174,6 +178,10 @@ const Signup: React.FC = () => {
             await AsyncStorage.setItem('guest_login', isGuest.toString());
 
             if (res && res.user) {
+                // Clear any lingering anonymous event data
+                const { clearAnonymousEventData } = require('../../../utils/HelperFunctions');
+                await clearAnonymousEventData();
+
                 await AsyncStorage.setItem('token', res.token);
                 await AsyncStorage.setItem('uid', res.user.uid);
 
@@ -228,6 +236,10 @@ const Signup: React.FC = () => {
             await AsyncStorage.setItem('guest_login', isGuest.toString());
 
             if (res && res.user) {
+                // Clear any lingering anonymous event data
+                const { clearAnonymousEventData } = require('../../../utils/HelperFunctions');
+                await clearAnonymousEventData();
+
                 await AsyncStorage.setItem('token', res.token);
                 await AsyncStorage.setItem('uid', res.user.uid);
 
@@ -282,6 +294,10 @@ const Signup: React.FC = () => {
             await AsyncStorage.setItem('guest_login', isGuest.toString());
 
             if (res && res.user) {
+                // Clear any lingering anonymous event data
+                const { clearAnonymousEventData } = require('../../../utils/HelperFunctions');
+                await clearAnonymousEventData();
+
                 await AsyncStorage.setItem('token', res.token);
                 await AsyncStorage.setItem('uid', res.user.uid);
 

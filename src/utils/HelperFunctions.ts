@@ -69,3 +69,27 @@ export const formatPrice = (value: any) => {
 
     return fixed;
 };
+
+// Helper to clear anonymous event data from AsyncStorage
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export const clearAnonymousEventData = async () => {
+    try {
+        const keys = await AsyncStorage.getAllKeys();
+
+        // Find all keys related to anonymous event acceptance
+        const keysToRemove = keys.filter(
+            key => key.startsWith('event_uuid_') || key.startsWith('terms_accepted_')
+        );
+
+        // Also remove the guest_login flag
+        keysToRemove.push('guest_login');
+
+        if (keysToRemove.length > 0) {
+            await AsyncStorage.multiRemove(keysToRemove);
+            console.log('Cleared anonymous event data:', keysToRemove);
+        }
+    } catch (error) {
+        console.error('Error clearing anonymous event data:', error);
+    }
+};

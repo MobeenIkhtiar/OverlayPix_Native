@@ -114,7 +114,7 @@ const ProfileScreen: React.FC = () => {
     const handleCameraClick = async () => {
         // react-native-image-picker does not require explicit permission request for library
         const options = {
-            mediaType: 'photo',
+            mediaType: 'photo' as const,
             includeBase64: true,
             maxWidth: 800,
             maxHeight: 800,
@@ -185,6 +185,9 @@ const ProfileScreen: React.FC = () => {
     // Professional logout handler
     const handleLogout = async () => {
         try {
+            const { clearAnonymousEventData } = require('../../utils/HelperFunctions');
+            await clearAnonymousEventData();
+
             // Clear user session data
             await Promise.all([
                 AsyncStorage.removeItem('token'),
@@ -208,7 +211,7 @@ const ProfileScreen: React.FC = () => {
 
             // Sign out from Firebase
             await auth.signOut();
-            
+
             // Notify user and navigate to login
             Alert.alert('Logout', 'You have been logged out successfully.');
             navigation.reset({ index: 0, routes: [{ name: 'login' }] });
