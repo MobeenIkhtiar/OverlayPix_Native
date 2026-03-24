@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { QrCode, Calendar, Crown, Users, Clock, Copy, Share2, Aperture, Link } from 'lucide-react-native';
+import { QrCode, Calendar, Crown, Users, Clock, Copy, Share2, Aperture, Link, Camera } from 'lucide-react-native';
 import { hp, wp } from '../contants/StyleGuide';
 
 interface EventSummaryCardProps {
@@ -9,6 +9,7 @@ interface EventSummaryCardProps {
     plan?: string;
     guestLimit?: string;
     photoPool?: string;
+    photosPerGuest?: number | string | null;
     photoDuration?: string;
     eventLink?: string;
     onCopyLink?: () => void;
@@ -22,6 +23,7 @@ export const EventSummaryCard: React.FC<EventSummaryCardProps> = ({
     plan,
     guestLimit,
     photoPool,
+    photosPerGuest,
     photoDuration,
     eventLink,
     onCopyLink,
@@ -36,6 +38,9 @@ export const EventSummaryCard: React.FC<EventSummaryCardProps> = ({
                 <SummaryRow icon={<Crown color="#3DA9B7" size={wp(5)} />} label="Plan" value={plan || 'No plan'} />
                 <SummaryRow icon={<Users color="#3DA9B7" size={wp(5)} />} label="Guest Limit" value={guestLimit || 'No limit'} />
                 <SummaryRow icon={<Aperture color="#3DA9B7" size={wp(5)} />} label="Photo Pool" value={photoPool || 'No pool'} />
+                {photosPerGuest != null && (
+                    <SummaryRow icon={<Camera color="#3DA9B7" size={wp(5)} />} label="Photos Per Guest" value={String(photosPerGuest)} />
+                )}
                 <SummaryRow icon={<Clock color="#3DA9B7" size={wp(5)} />} label="Photo Duration" value={photoDuration || 'No duration'} />
                 <View style={styles.linkSection}>
                     <View style={styles.linkRow}>
