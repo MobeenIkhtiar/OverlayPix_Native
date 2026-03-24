@@ -23,9 +23,20 @@ import ForgotPassword from '../screens/auth/forgotPassword';
 
 const Stack = createStackNavigator();
 
+const linking = {
+    prefixes: ['https://overlaypix.com', 'overlaypix://'],
+    config: {
+        screens: {
+            // When user scans QR code with URL like https://overlaypix.com/ABC123
+            // → opens termsAndPolicy screen with shareId = "ABC123"
+            termsAndPolicy: ':shareId',
+        },
+    },
+};
+
 const AppNavigator = () => {
     return (
-        <NavigationContainer>
+        <NavigationContainer linking={linking}>
             <Stack.Navigator initialRouteName="login" screenOptions={{ headerShown: false }}>
                 {/* <Stack.Screen name="onBoarding" component={OnBoarding} /> */}
                 <Stack.Screen name="login" component={LoginScreen} />

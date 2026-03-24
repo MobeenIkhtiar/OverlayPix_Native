@@ -56,13 +56,13 @@ const InviteGuestEasily: React.FC = () => {
     // Copy event link
     const handleCopyLink = async () => {
         if (eventData?.shareCode) {
-            const url = `https://overlaypix.com/termsAndPolicy/${eventData.shareCode}`;
+            const url = `https://overlaypix.com/${eventData.shareCode}`;
             Clipboard.setString(url);
 
             Toast.show({
                 type: 'success',
                 text1: '✔️ Link copied!',
-                text2: `https://overlaypix.com/termsAndPolicy/${eventData.shareCode}`,
+                text2: `https://overlaypix.com/${eventData.shareCode}`,
                 text2Style: { marginTop: hp(1), fontSize: wp(2.5), color: '#3DA9B7' },
                 visibilityTime: 2000,
                 position: 'top',
@@ -186,8 +186,7 @@ const InviteGuestEasily: React.FC = () => {
 
     const eventShareUrl = eventData?.shareCode
         ?
-        `https://overlaypix.com/termsAndPolicy/${eventData.shareCode}`
-        // `http://192.168.100.108:5173/event/${eventData.shareCode}`
+        `https://overlaypix.com/${eventData.shareCode}`
         : '';
 
     if (loading) {
