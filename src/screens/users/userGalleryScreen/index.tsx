@@ -8,7 +8,9 @@ import { proxyOverlayImage, showErrorToastWithSupport } from '../../../utils/Hel
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { hp, wp } from '../../../contants/StyleGuide';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Plus, Share2 } from 'lucide-react-native';
+import { doc, getDoc } from '@react-native-firebase/firestore';
+import { db } from '../../../services/loginService';
+import { Camera, Plus, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const UserGalleryScreen: React.FC = () => {
@@ -29,19 +31,35 @@ const UserGalleryScreen: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
     const [searchGuest, setSearchGuest] = useState<string>('');
+    const [hasCreds, setHasCreds] = useState<boolean>(false);
+    const [userRole, setUserRole] = useState<string | null>(null);
 
     useEffect(() => {
         // Modified to use AsyncStorage instead of localStorage for native, keep localStorage for web
-        const checkIsAnonymous = async () => {
+        const checkAuthAndRole = async () => {
             try {
-                let isAnon: string | null = null;
-
-                isAnon = await AsyncStorage.getItem('isAnonymous');
-
+                const isAnon = await AsyncStorage.getItem('isAnonymous');
                 setIsAnonymous(isAnon === 'true');
-            } catch { }
+
+                const token = await AsyncStorage.getItem('token');
+                const uid = await AsyncStorage.getItem('uid');
+
+                if (token && uid && isAnon !== 'true') {
+                    setHasCreds(true);
+
+                    // Fetch user role
+                    const userDocRef = doc(db, 'users', uid);
+                    const userDoc = await getDoc(userDocRef);
+                    if (userDoc.exists()) {
+                        const data = userDoc.data();
+                        setUserRole(data?.role || null);
+                    }
+                }
+            } catch (err) {
+                console.log('Auth check error:', err);
+            }
         };
-        checkIsAnonymous();
+        checkAuthAndRole();
     }, []);
 
     useEffect(() => {
@@ -94,6 +112,12 @@ const UserGalleryScreen: React.FC = () => {
         const totalPhotoPool = galleryImages?.totalPhotoPool ?? 0;
         const currentPhotoCount = galleryImages?.currentPhotoCount ?? 0;
         const overlayUrl = proxyOverlayImage(galleryImages?.overlayUrl);
+        const isEventExpired = galleryImages?.eventStatus === 'expired';
+
+        if (isEventExpired) {
+            showErrorToastWithSupport("Event has been expired")
+            return;
+        }
 
         if (allowedPhotos === 0) {
             if (totalPhotoPool === currentPhotoCount) {
@@ -154,6 +178,20 @@ const UserGalleryScreen: React.FC = () => {
             />
             {/* Top Bar */}
             <View style={styles.container}>
+                {hasCreds && (
+                    <TouchableOpacity
+                        style={styles.dashboardBtn}
+                        onPress={() => {
+                            if (userRole === 'guest') {
+                                navigation.navigate('joinedEvent');
+                            } else {
+                                navigation.navigate('dashboard');
+                            }
+                        }}
+                    >
+                        <Text style={styles.dashboardBtnText}>Go to Dashboard</Text>
+                    </TouchableOpacity>
+                )}
                 <View style={styles.topBarRow}>
                     <View style={styles.tabBtnRow}>
                         <TouchableOpacity
@@ -279,7 +317,7 @@ const UserGalleryScreen: React.FC = () => {
                     accessibilityLabel="Add Photo"
                     onPress={handleTakePicture}
                 >
-                    <Plus color={'#fff'} size={wp(7)} />
+                    <Camera color={'#fff'} size={wp(7)} />
                 </TouchableOpacity>
 
                 <PhotoLimitModal open={showPhotoLimitModal} onClose={() => setShowPhotoLimitModal(false)} />
@@ -358,10 +396,28 @@ const styles = StyleSheet.create({
         padding: wp(3),
         backgroundColor: '#F6FFFF'
     },
+    dashboardBtn: {
+        alignSelf: 'flex-end',
+        backgroundColor: '#3DA9B7',
+        paddingHorizontal: wp(4),
+        paddingVertical: hp(1.2),
+        borderRadius: 20,
+        marginBottom: hp(1),
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.15,
+        shadowRadius: 3,
+        elevation: 3,
+    },
+    dashboardBtnText: {
+        color: '#fff',
+        fontSize: wp(3.2),
+        fontWeight: '600',
+    },
     topBarRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: hp(2),
+        marginTop: hp(1),
         justifyContent: 'space-between',
         marginBottom: hp(4),
     },

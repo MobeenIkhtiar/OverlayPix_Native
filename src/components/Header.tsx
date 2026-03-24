@@ -4,6 +4,7 @@ import { profileService } from '../services/profileService';
 import { icons } from '../contants/Icons';
 import { useNavigation } from '@react-navigation/native';
 import { hp, wp } from '../contants/StyleGuide';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface HeaderProps {
     title?: string;
@@ -90,11 +91,19 @@ const Header: React.FC<HeaderProps> = ({
                 </View>
                 <TouchableOpacity
                     style={styles.profileButton}
-                    onPress={() => {
-                        if (isAnonymous) {
+                    onPress={async () => {
+                        const token = await AsyncStorage.getItem('token');
+                        const isAnonStorage = await AsyncStorage.getItem('isAnonymous');
+
+                        if (token && isAnonStorage !== 'true') {
+                            // Logged-in user → go to profile regardless of isAnonymous flag
+                            navigation.navigate('profile');
+                        } else if (isAnonymous || isAnonStorage === 'true') {
+                            // Anonymous user → prompt to sign in
                             navigation.navigate('login', { guest: true, shareId: shareId, isAnonymous: true });
                         } else {
-                            navigation.navigate('profile');
+                            // No token and not flagged anonymous → still send to login
+                            navigation.navigate('login');
                         }
                     }}
                     activeOpacity={0.7}

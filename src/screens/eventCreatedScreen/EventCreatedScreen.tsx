@@ -18,6 +18,8 @@ const EventCreatedScreen: React.FC = () => {
     const [eventData, setEventData] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(true);
 
+    console.log("eventData created  =>>>>>>>>>", eventData);
+
     const parseDate = (
         dateValue: { _seconds: number; _nanoseconds?: number } | string | null | undefined,
         startTime?: string
@@ -93,13 +95,13 @@ const EventCreatedScreen: React.FC = () => {
     // Copy event link
     const handleCopyLink = async () => {
         if (eventData?.shareCode) {
-            const url = `https://overlaypix.com/termsAndPolicy/${eventData.shareCode}`;
+            const url = `https://overlaypix.com/${eventData.shareCode}`;
             Clipboard.setString(url);
 
             Toast.show({
                 type: 'success',
                 text1: '✔️ Link copied!',
-                text2: `https://overlaypix.com/termsAndPolicy/${eventData.shareCode}`,
+                text2: `https://overlaypix.com/${eventData.shareCode}`,
                 text2Style: { marginTop: hp(1), fontSize: wp(2.5), color: '#3DA9B7' },
                 visibilityTime: 2000,
                 position: 'top',
@@ -111,7 +113,7 @@ const EventCreatedScreen: React.FC = () => {
     const handleShareLink = async () => {
         if (!eventData?.shareCode) return;
 
-        const url = `https://overlaypix.com/termsAndPolicy/${eventData.shareCode}`;
+        const url = `https://overlaypix.com/${eventData.shareCode}`;
         const shareData = {
             title: eventData?.name ? `Join my event: ${eventData.name}` : 'Join my event',
             message: eventData?.name
@@ -172,9 +174,10 @@ const EventCreatedScreen: React.FC = () => {
                                 guestLimit={eventData?.customPlan?.guestLimit}
                                 photoPool={eventData?.customPlan?.photoPool}
                                 photoDuration={eventData?.customPlan?.storageDays}
+                                photosPerGuest={eventData?.customPlan?.photosPerGuest}
                                 eventLink={
                                     eventData?.shareCode
-                                        ? `https://overlaypix.com/termsAndPolicy/${eventData.shareCode}`
+                                        ? `https://overlaypix.com/${eventData.shareCode}`
                                         : ''
                                 }
                                 onCopyLink={handleCopyLink}
