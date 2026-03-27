@@ -159,13 +159,8 @@ const Login: React.FC = () => {
             await setItem('uid', user.uid);
             await setItem('guest_login', isGuest.toString());
 
-            // Remove anonymous flag if user was anonymous
-            if (isAnonymous) {
-                await removeItem('isAnonymous');
-                // setConversionProvider('Email');
-                // setShowConversionBanner(true);
-                // setTimeout(() => setShowConversionBanner(false), 3000);
-            }
+            // Always remove anonymous flag on successful login
+            await removeItem('isAnonymous');
 
             if (isAnonymous) {
                 if (role === 'guest') {
@@ -222,12 +217,8 @@ const Login: React.FC = () => {
                 await setItem('token', res.token);
                 await setItem('uid', res.user.uid);
 
-                if (res.converted) {
-                    await removeItem('isAnonymous');
-                    // setConversionProvider('Google');
-                    // setShowConversionBanner(true);
-                    // setTimeout(() => setShowConversionBanner(false), 3000);
-                }
+                // Always remove anonymous flag on successful login
+                await removeItem('isAnonymous');
 
                 const role = await fetchUserRole(res.user.uid);
 
@@ -284,12 +275,8 @@ const Login: React.FC = () => {
                 await setItem('token', res.token);
                 await setItem('uid', res.user.uid);
 
-                if (res.converted) {
-                    await removeItem('isAnonymous');
-                    // setConversionProvider('Facebook');
-                    // setShowConversionBanner(true);
-                    // setTimeout(() => setShowConversionBanner(false), 3000);
-                }
+                // Always remove anonymous flag on successful login
+                await removeItem('isAnonymous');
 
                 const role = await fetchUserRole(res.user.uid);
 
@@ -345,12 +332,8 @@ const Login: React.FC = () => {
                 await setItem('token', res.token);
                 await setItem('uid', res.user.uid);
 
-                if (res.converted) {
-                    await removeItem('isAnonymous');
-                    // setConversionProvider('Apple');
-                    // setShowConversionBanner(true);
-                    // setTimeout(() => setShowConversionBanner(false), 3000);
-                }
+                // Always remove anonymous flag on successful login
+                await removeItem('isAnonymous');
 
                 const role = await fetchUserRole(res.user.uid);
 

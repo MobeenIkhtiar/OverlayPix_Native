@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, Image, TextInput, ActivityIndicator, StyleSheet, ScrollView, Platform, Share } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, TextInput, ActivityIndicator, StyleSheet, ScrollView, Share, Alert } from 'react-native';
+import FastImage from 'react-native-fast-image';
 import Clipboard from '@react-native-clipboard/clipboard';
 import Header from '../../../components/Header';
 import PhotoLimitModal from '../../../components/PhotoLimitModal';
 import { guestServices } from '../../../services/guestsService';
-import { proxyOverlayImage, showErrorToastWithSupport } from '../../../utils/HelperFunctions';
+import { downloadImages, proxyOverlayImage, showErrorToastWithSupport } from '../../../utils/HelperFunctions';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { hp, wp } from '../../../contants/StyleGuide';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from '@react-native-firebase/firestore';
 import { db } from '../../../services/loginService';
-import { Camera, Plus, Share2 } from 'lucide-react-native';
+import { Camera, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const UserGalleryScreen: React.FC = () => {
@@ -86,6 +87,7 @@ const UserGalleryScreen: React.FC = () => {
             const response: any = await guestServices.getGuestsImages(eventID, endpoint);
 
             console.log('response gallery =>>>>>>>>>>', response);
+            console.log('canSharePhotos from API:', response?.canSharePhotos);
 
             if (activeTab === 'your') {
                 setGalleryImages(response || []);
@@ -148,7 +150,30 @@ const UserGalleryScreen: React.FC = () => {
         setShowPhotoLimitModal(true);
     };
 
+    const handleDownloadAll = () => {
+        const photosToDownload = filteredImagesToShow?.map((img: any) => img.photoUrl) || [];
+
+        if (photosToDownload.length === 0) {
+            showErrorToastWithSupport("No images to download");
+            return;
+        }
+
+        Alert.alert(
+            "Download Images",
+            "Are you sure you want to download all images?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Yes",
+                    onPress: () => downloadImages(photosToDownload, galleryImages?.eventName)
+                }
+            ]
+        );
+    };
+
     const imagesToShow = activeTab === 'your' ? galleryImages?.photos : liveGalleryImages?.photos;
+    const currentResponse = activeTab === 'your' ? galleryImages : liveGalleryImages;
+    const canSharePhotos = currentResponse?.canSharePhotos === true;
 
     const guestList: string[] = Array.from(
         new Set(
@@ -272,6 +297,15 @@ const UserGalleryScreen: React.FC = () => {
                     )}
                 </View>
 
+                {canSharePhotos && (
+                    <TouchableOpacity
+                        style={styles.downloadBtn}
+                        onPress={handleDownloadAll}
+                    >
+                        <Text style={styles.downloadBtnText}>Download All</Text>
+                    </TouchableOpacity>
+                )}
+
                 {/* GALLERY START */}
                 <View style={styles.galleryWrap}>
 
@@ -300,7 +334,8 @@ const UserGalleryScreen: React.FC = () => {
                                         navigation.navigate('viewImage', {
                                             eventID,
                                             shareId: galleryImages?.shareId,
-                                            guestId: item.guestId
+                                            guestId: item.guestId,
+                                            selectedPhotoUrl: item.photoUrl
                                         });
                                     }}
                                     photoUrl={item.photoUrl}
@@ -361,7 +396,14 @@ const GalleryCard: React.FC<{ name: string; image: string; activeTab: 'your' | '
             onPress={onClick}
             activeOpacity={0.92}
         >
-            <Image source={{ uri: image }} style={styles.cardImage} resizeMode="stretch" />
+            <FastImage
+                source={{
+                    uri: image,
+                    priority: FastImage.priority.high,
+                }}
+                style={styles.cardImage}
+                resizeMode={FastImage.resizeMode.stretch}
+            />
             {activeTab === 'live' ? (
                 <View style={styles.galleryCardLiveBar}>
                     <Text style={styles.galleryCardLiveName} numberOfLines={1}>{name}</Text>
@@ -419,7 +461,23 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: hp(1),
         justifyContent: 'space-between',
-        marginBottom: hp(4),
+        marginBottom: hp(2),
+    },
+    downloadBtn: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#3DA9B7',
+        paddingHorizontal: wp(4),
+        paddingVertical: hp(0.8),
+        borderRadius: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: hp(2),
+    },
+    downloadBtnText: {
+        color: '#3DA9B7',
+        fontSize: wp(2.8),
+        fontWeight: '600',
     },
     tabBtnRow: {
         flexDirection: 'row',
@@ -502,7 +560,7 @@ const styles = StyleSheet.create({
     },
     guestDropdownScroll: {
         maxHeight: hp(35),
-        paddingVertical: hp(1)
+        paddingVertical: hp(1),
     },
     noGuestText: {
         color: 'gray',
@@ -531,9 +589,10 @@ const styles = StyleSheet.create({
         color: '#3DA9B7'
     },
     galleryWrap: {
-        flex: 1,
+        flexGrow: 1,
         marginTop: hp(1),
         marginBottom: hp(6),
+        paddingBottom: hp(10)
     },
     centered: {
         justifyContent: 'center',

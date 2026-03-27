@@ -513,10 +513,10 @@ const CreateEventSecondStep: React.FC = () => {
                                     />
                                 </View>
                                 <View style={styles.toggleRow}>
-                                    <Text style={styles.toggleLabel}>Allow Guest to share Live Gallery pictures?</Text>
+                                    <Text style={styles.toggleLabel}>Allow Guest to Download Live Gallery pictures?</Text>
                                     <ToggleSwitch
                                         checked={step2Data.plan.permissions.canSharePhotos}
-                                        isEditMode={isEditMode}
+                                        isEditMode={false}
                                         onChange={(checked) => updatePlanData({
                                             permissions: {
                                                 ...step2Data.plan.permissions,
@@ -852,6 +852,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3,
         marginBottom: hp(1),
+        borderRadius: wp(2),
     },
     addonCard: {
         flex: 1,
@@ -927,6 +928,8 @@ const styles = StyleSheet.create({
     plansContent: {
         width: '100%',
         paddingBottom: hp(2),
+        padding: wp(1),
+        borderRadius: wp(2),
     },
     sectionTitle: {
         fontSize: wp(5),
@@ -1077,6 +1080,8 @@ const styles = StyleSheet.create({
         borderRadius: wp(3),
         paddingVertical: hp(2.5),
         marginTop: hp(1),
+        width: '98%',
+        alignSelf: 'center'
     },
     photoLimitToggleTextContainer: {
         flexDirection: 'column',
@@ -1084,6 +1089,8 @@ const styles = StyleSheet.create({
     },
     photosPerGuestSection: {
         width: '100%',
+        padding: wp(1),
+        borderRadius: wp(2),
     },
     photosPerGuestLabel: {
         fontSize: wp(3.5),
@@ -1142,6 +1149,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         width: '100%',
+        marginBottom: wp(2)
     },
     storageDurationHeader: {
         flexDirection: 'row',

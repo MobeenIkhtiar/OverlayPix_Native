@@ -651,14 +651,27 @@ const CreateEventScreen: React.FC = () => {
                                                     selectedStartDate={eventDate || undefined}
                                                     minDate={new Date(new Date().setHours(0, 0, 0, 0))}
                                                     width={getCalendarWidth()}
-                                                    onDateChange={(date: Date) => {
+                                                    onDateChange={(date: any) => {
                                                         if (!date) return;
+
+                                                        const rawYear: number =
+                                                            typeof date.year === 'function'
+                                                                ? date.year()          // moment .year()
+                                                                : date.getFullYear();  // plain Date fallback
+                                                        const rawMonth: number =
+                                                            typeof date.month === 'function'
+                                                                ? date.month()         // moment .month() is 0-indexed
+                                                                : date.getMonth();
+                                                        const rawDay: number =
+                                                            typeof date.date === 'function'
+                                                                ? date.date()          // moment .date()
+                                                                : date.getDate();
+
+                                                        // Build a local midnight Date from the extracted values
+                                                        const picked = new Date(rawYear, rawMonth, rawDay, 0, 0, 0, 0);
 
                                                         const now = new Date();
                                                         now.setHours(0, 0, 0, 0);
-
-                                                        const picked = new Date(date as Date);
-                                                        picked.setHours(0, 0, 0, 0);
 
                                                         if (picked.getTime() < now.getTime()) {
                                                             Alert.alert(

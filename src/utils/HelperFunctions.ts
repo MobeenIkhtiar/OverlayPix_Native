@@ -1,6 +1,7 @@
-import { Linking, Alert } from 'react-native';
+import { Linking, Alert, Platform, PermissionsAndroid } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { BASEURL } from '../services/Endpoints';
+import RNFS from 'react-native-fs';
 
 const handleSupportEmail = async () => {
     const email = 'support@overlaypix.com';
@@ -91,5 +92,135 @@ export const clearAnonymousEventData = async () => {
         }
     } catch (error) {
         console.error('Error clearing anonymous event data:', error);
+    }
+};
+
+/**
+ * Handle multiple image downloads efficiently.
+ * @param urls Array of image URLs to download
+ * @param eventName Name of the event to create a subfolder for
+ */
+export const downloadImages = async (urls: string[], eventName?: string) => {
+    if (!urls || urls.length === 0) {
+        Toast.show({
+            type: 'error',
+            text1: 'No images to download',
+        });
+        return;
+    }
+
+    // Sanitize eventName for folder name
+    const sanitizedEventName = eventName ? eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'event_photos';
+
+    // Request permissions on Android
+    if (Platform.OS === 'android') {
+        try {
+            if (Platform.Version < 33) {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+                    {
+                        title: 'Storage Permission Required',
+                        message: 'App needs access to your storage to save photos',
+                        buttonPositive: 'OK',
+                    }
+                );
+                if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Permission Denied',
+                        text2: 'Storage permission is required to download images',
+                    });
+                    return;
+                }
+            }
+        } catch (err) {
+            console.error('Permission error:', err);
+            return;
+        }
+    }
+
+    Toast.show({
+        type: 'info',
+        text1: 'Downloading images...',
+        text2: `0 of ${urls.length} completed`,
+        autoHide: false,
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    const baseDir = Platform.select({
+        ios: RNFS.DocumentDirectoryPath,
+        android: RNFS.DownloadDirectoryPath,
+    }) || RNFS.CachesDirectoryPath;
+
+    const overlayPixDir = `${baseDir}/OverlayPix`;
+    const eventDir = `${overlayPixDir}/${sanitizedEventName}`;
+
+    try {
+        // Create directories if they don't exist
+        const exists = await RNFS.exists(eventDir);
+        if (!exists) {
+            await RNFS.mkdir(eventDir);
+        }
+    } catch (err) {
+        console.error('Error creating directory:', err);
+        // Fallback to baseDir if mkdir fails (unlikely, but safe)
+    }
+
+    const downloadDir = eventDir;
+
+    // Use a Promise.all with some concurrency control if needed, but for simplicity we'll do them sequentially or in small batches
+    // Let's do them in parallel since they are separate files
+    const downloadPromises = urls.map(async (url, index) => {
+        try {
+            const fileName = `OverlayPix_${Date.now()}_${index}.jpg`;
+            const destPath = `${downloadDir}/${fileName}`;
+
+            const result = await RNFS.downloadFile({
+                fromUrl: url,
+                toFile: destPath,
+                background: true,
+            }).promise;
+
+            if (result.statusCode === 200) {
+                successCount++;
+            } else {
+                failCount++;
+            }
+        } catch (error) {
+            console.error(`Error downloading image ${index}:`, error);
+            failCount++;
+        } finally {
+            // Update toast progress every 5 images or at the end to avoid UI lag
+            if ((successCount + failCount) % 5 === 0 || (successCount + failCount) === urls.length) {
+                Toast.show({
+                    type: 'info',
+                    text1: 'Downloading images...',
+                    text2: `${successCount + failCount} of ${urls.length} completed`,
+                    autoHide: false,
+                });
+            }
+        }
+    });
+
+    await Promise.all(downloadPromises);
+
+    Toast.hide();
+
+    if (successCount === urls.length) {
+        Toast.show({
+            type: 'success',
+            text1: 'Download Complete!',
+            text2: `Successfully saved ${successCount} images to ${Platform.OS === 'ios' ? 'Files' : 'Downloads'}`,
+            visibilityTime: 4000,
+        });
+    } else {
+        Toast.show({
+            type: 'info',
+            text1: 'Download Finished',
+            text2: `${successCount} saved, ${failCount} failed. Check your ${Platform.OS === 'ios' ? 'Files' : 'Downloads'} folder.`,
+            visibilityTime: 5000,
+        });
     }
 };

@@ -66,7 +66,7 @@ export const guestServices = {
             throw new Error('event ID and photo data are required');
         }
 
-        console.log('upload photo from data =>>>>>>>>>>>>>.',eventId,formData)
+        console.log('upload photo from data =>>>>>>>>>>>>>.', eventId, formData)
 
         try {
             const response = await apiService<UploadPhotoResponse>(
@@ -120,7 +120,7 @@ export const guestServices = {
         if (!eventId) {
             throw new Error('event ID is required');
         }
-        console.log('user gallery  event id=>>>>>>', eventId, '=>>>>>>>>>>>>',);
+        // console.log('user gallery  event id=>>>>>>', eventId, '=>>>>>>>>>>>>',);
         try {
             const response = await apiService<GetGalleryImagesResponse>(
                 `/guests/${eventId}/${endPoint}`,

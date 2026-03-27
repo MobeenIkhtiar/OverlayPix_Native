@@ -103,5 +103,9 @@
 	<string>Overlay Pix needs access to your photo library so you can choose photos to edit and apply creative overlays.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Overlay Pix needs permission to save QR codes and edited photos to your photo library.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 </dict>
 </plist>

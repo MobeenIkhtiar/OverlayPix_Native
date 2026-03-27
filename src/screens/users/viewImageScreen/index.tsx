@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator, Share } from 'react-native';
+import FastImage from 'react-native-fast-image';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Header from '../../../components/Header';
@@ -28,7 +29,7 @@ type AllImagesResponse = {
 const ViewImageScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
-    const { eventID, guestId, shareId } = route.params || {};
+    const { eventID, guestId, shareId, selectedPhotoUrl } = route.params || {};
     const [allImages, setAllImages] = useState<AllImagesResponse>({});
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -72,7 +73,12 @@ const ViewImageScreen: React.FC = () => {
             console.log('View Image Fetched response:', response);
 
             setAllImages(response || {});
-            setSelectedImageIdx(0); // Reset to first image on new fetch
+            if (selectedPhotoUrl && Array.isArray(response?.photos)) {
+                const idx = response.photos.findIndex((p: Photo) => p.photoUrl === selectedPhotoUrl);
+                setSelectedImageIdx(idx !== -1 ? idx : 0);
+            } else {
+                setSelectedImageIdx(0); // Reset to first image on new fetch
+            }
         } catch (err: any) {
             setError(
                 err instanceof Error
@@ -174,7 +180,7 @@ const ViewImageScreen: React.FC = () => {
                                 style={styles.backButton}
                                 onPress={() => navigation.goBack()}
                             >
-                            <ArrowLeft color={'#000'} size={wp(6)} />
+                                <ArrowLeft color={'#000'} size={wp(6)} />
                             </TouchableOpacity>
                             <View style={styles.titleInfo}>
                                 <Text style={styles.eventName}>{allImages.eventInfo?.name || 'Event'}</Text>
@@ -193,7 +199,7 @@ const ViewImageScreen: React.FC = () => {
                                 style={styles.shareButton}
                                 onPress={() => handleShareLink()}
                             >
-                             <Share2 color={'#000'} size={wp(5)} />
+                                <Share2 color={'#000'} size={wp(5)} />
                             </TouchableOpacity>
                         </View>
 
@@ -201,10 +207,13 @@ const ViewImageScreen: React.FC = () => {
                         <View style={styles.mainImageContainer}>
                             <View style={styles.mainImageWrapper}>
                                 {mainImage ? (
-                                    <Image
-                                        source={{ uri: mainImage }}
+                                    <FastImage
+                                        source={{
+                                            uri: mainImage,
+                                            priority: FastImage.priority.high,
+                                        }}
                                         style={styles.mainImage}
-                                        resizeMode="stretch"
+                                        resizeMode={FastImage.resizeMode.stretch}
                                     />
                                 ) : (
                                     <View style={[styles.mainImage, styles.placeholderContainer]}>
@@ -234,10 +243,13 @@ const ViewImageScreen: React.FC = () => {
                                         ]}
                                         onPress={() => setSelectedImageIdx(idx)}
                                     >
-                                        <Image
-                                            source={{ uri: img.src }}
+                                        <FastImage
+                                            source={{
+                                                uri: img.src,
+                                                priority: FastImage.priority.high,
+                                            }}
                                             style={styles.thumbnailImage}
-                                            resizeMode="stretch"
+                                            resizeMode={FastImage.resizeMode.stretch}
                                         />
                                         <TouchableOpacity
                                             style={styles.thumbnailShareBar}
@@ -246,7 +258,7 @@ const ViewImageScreen: React.FC = () => {
                                             <Text style={styles.thumbnailOwner} numberOfLines={1}>
                                                 {img.owner}
                                             </Text>
-                                           <Share2 color={'#000'} size={wp(3)} />
+                                            <Share2 color={'#000'} size={wp(3)} />
                                         </TouchableOpacity>
                                     </TouchableOpacity>
                                 ) : null
@@ -408,9 +420,10 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 2,
+        borderWidth: 2,
+        borderColor: 'transparent',
     },
     thumbnailSelected: {
-        borderWidth: 2,
         borderColor: '#3DA9B7',
     },
     thumbnailImage: {
