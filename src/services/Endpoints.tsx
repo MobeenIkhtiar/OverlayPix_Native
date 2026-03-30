@@ -1,6 +1,6 @@
 export const BASEURL = 'https://overlay-pix-back.onrender.com/api';
 // export const BASEURL = 'https://empathetic-spirit-production-8c98.up.railway.app/api';
-// export const BASEURL = 'http://192.168.100.4:5001/api';
+// export const BASEURL = 'http://192.168.100.31:5001/api';
 
 // 7   5g
 // 15  4g

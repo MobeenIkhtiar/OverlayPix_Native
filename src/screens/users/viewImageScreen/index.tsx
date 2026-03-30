@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator, Share, Alert } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Header from '../../../components/Header';
 import { guestServices } from '../../../services/guestsService';
 import { hp, wp } from '../../../contants/StyleGuide';
+import { downloadImages, showErrorToastWithSupport } from '../../../utils/HelperFunctions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Share2 } from 'lucide-react-native';
+import { ArrowLeft, Share2, Download } from 'lucide-react-native';
 
 type Photo = {
     photoUrl: string;
@@ -29,7 +30,7 @@ type AllImagesResponse = {
 const ViewImageScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
-    const { eventID, guestId, shareId, selectedPhotoUrl } = route.params || {};
+    const { eventID, guestId, shareId, selectedPhotoUrl, canSharePhotos, canDownload } = route.params || {};
     const [allImages, setAllImages] = useState<AllImagesResponse>({});
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -145,6 +146,22 @@ const ViewImageScreen: React.FC = () => {
             }
         }
     };
+    
+    const handleDownload = () => {
+        if (!mainImage) return;
+        
+        Alert.alert(
+            "Download Image",
+            "Are you sure you want to download this image?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Yes",
+                    onPress: () => downloadImages([mainImage], allImages.eventInfo?.name || 'Event')
+                }
+            ]
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -195,12 +212,24 @@ const ViewImageScreen: React.FC = () => {
                             <Text style={styles.guestName}>
                                 {mainImageGuestName}
                             </Text>
-                            <TouchableOpacity
-                                style={styles.shareButton}
-                                onPress={() => handleShareLink()}
-                            >
-                                <Share2 color={'#000'} size={wp(5)} />
-                            </TouchableOpacity>
+                            <View style={styles.actionsRow}>
+                                {canDownload && (
+                                    <TouchableOpacity
+                                        style={[styles.shareButton, { marginRight: wp(2) }]}
+                                        onPress={() => handleDownload()}
+                                    >
+                                        <Download color={'#000'} size={wp(5)} />
+                                    </TouchableOpacity>
+                                )}
+                                {canSharePhotos && (
+                                    <TouchableOpacity
+                                        style={styles.shareButton}
+                                        onPress={() => handleShareLink()}
+                                    >
+                                        <Share2 color={'#000'} size={wp(5)} />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
                         </View>
 
                         {/* Main Image */}
@@ -258,7 +287,7 @@ const ViewImageScreen: React.FC = () => {
                                             <Text style={styles.thumbnailOwner} numberOfLines={1}>
                                                 {img.owner}
                                             </Text>
-                                            <Share2 color={'#000'} size={wp(3)} />
+                                            {canSharePhotos && <Share2 color={'#fff'} size={wp(3)} />}
                                         </TouchableOpacity>
                                     </TouchableOpacity>
                                 ) : null
@@ -453,6 +482,10 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: wp(4),
         marginLeft: wp(2),
+    },
+    actionsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
 });
 

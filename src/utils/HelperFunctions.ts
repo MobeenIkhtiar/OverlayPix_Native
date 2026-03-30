@@ -2,8 +2,7 @@ import { Linking, Alert, Platform, PermissionsAndroid } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { BASEURL } from '../services/Endpoints';
 import RNFS from 'react-native-fs';
-
-const handleSupportEmail = async () => {
+import { CameraRoll } from '@react-native-camera-roll/camera-roll';const handleSupportEmail = async () => {
     const email = 'support@overlaypix.com';
     const url = `mailto:${email}`;
 
@@ -184,6 +183,13 @@ export const downloadImages = async (urls: string[], eventName?: string) => {
             }).promise;
 
             if (result.statusCode === 200) {
+                if (Platform.OS === 'android') {
+                    // Update Android Media Store immediately
+                    await RNFS.scanFile(destPath);
+                } else if (Platform.OS === 'ios') {
+                    // Save to iOS native Photos App
+                    await CameraRoll.save(destPath, { type: 'photo' });
+                }
                 successCount++;
             } else {
                 failCount++;
@@ -212,14 +218,14 @@ export const downloadImages = async (urls: string[], eventName?: string) => {
         Toast.show({
             type: 'success',
             text1: 'Download Complete!',
-            text2: `Successfully saved ${successCount} images to ${Platform.OS === 'ios' ? 'Files' : 'Downloads'}`,
+            text2: `Successfully saved ${successCount} images to Gallery`,
             visibilityTime: 4000,
         });
     } else {
         Toast.show({
             type: 'info',
             text1: 'Download Finished',
-            text2: `${successCount} saved, ${failCount} failed. Check your ${Platform.OS === 'ios' ? 'Files' : 'Downloads'} folder.`,
+            text2: `${successCount} saved to Gallery, ${failCount} failed.`,
             visibilityTime: 5000,
         });
     }

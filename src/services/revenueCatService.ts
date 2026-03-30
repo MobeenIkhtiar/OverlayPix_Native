@@ -4,7 +4,6 @@ import Purchases, {
     PurchasesStoreTransaction,
     CustomerInfo,
     LOG_LEVEL,
-    PurchasesError,
 } from 'react-native-purchases';
 import { Platform } from 'react-native';
 

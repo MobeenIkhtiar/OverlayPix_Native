@@ -513,7 +513,7 @@ const CreateEventSecondStep: React.FC = () => {
                                     />
                                 </View>
                                 <View style={styles.toggleRow}>
-                                    <Text style={styles.toggleLabel}>Allow Guest to Download Live Gallery pictures?</Text>
+                                    <Text style={styles.toggleLabel}>Allow Guest to Share Live Gallery pictures?</Text>
                                     <ToggleSwitch
                                         checked={step2Data.plan.permissions.canSharePhotos}
                                         isEditMode={false}
@@ -521,6 +521,19 @@ const CreateEventSecondStep: React.FC = () => {
                                             permissions: {
                                                 ...step2Data.plan.permissions,
                                                 canSharePhotos: checked
+                                            }
+                                        })}
+                                    />
+                                </View>
+                                <View style={styles.toggleRow}>
+                                    <Text style={styles.toggleLabel}>Allow Guest to Download Live Gallery pictures?</Text>
+                                    <ToggleSwitch
+                                        checked={step2Data.plan.permissions.canDownload}
+                                        isEditMode={false}
+                                        onChange={(checked) => updatePlanData({
+                                            permissions: {
+                                                ...step2Data.plan.permissions,
+                                                canDownload: checked
                                             }
                                         })}
                                     />

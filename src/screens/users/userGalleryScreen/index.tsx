@@ -88,6 +88,7 @@ const UserGalleryScreen: React.FC = () => {
 
             console.log('response gallery =>>>>>>>>>>', response);
             console.log('canSharePhotos from API:', response?.canSharePhotos);
+            console.log('canDownload from API:', response?.canDownload);
 
             if (activeTab === 'your') {
                 setGalleryImages(response || []);
@@ -174,6 +175,7 @@ const UserGalleryScreen: React.FC = () => {
     const imagesToShow = activeTab === 'your' ? galleryImages?.photos : liveGalleryImages?.photos;
     const currentResponse = activeTab === 'your' ? galleryImages : liveGalleryImages;
     const canSharePhotos = currentResponse?.canSharePhotos === true;
+    const canDownload = currentResponse?.canDownload === true;
 
     const guestList: string[] = Array.from(
         new Set(
@@ -297,7 +299,7 @@ const UserGalleryScreen: React.FC = () => {
                     )}
                 </View>
 
-                {canSharePhotos && (
+                {canDownload && filteredImagesToShow?.length > 0 && (
                     <TouchableOpacity
                         style={styles.downloadBtn}
                         onPress={handleDownloadAll}
@@ -335,10 +337,13 @@ const UserGalleryScreen: React.FC = () => {
                                             eventID,
                                             shareId: galleryImages?.shareId,
                                             guestId: item.guestId,
-                                            selectedPhotoUrl: item.photoUrl
+                                            selectedPhotoUrl: item.photoUrl,
+                                            canSharePhotos: canSharePhotos,
+                                            canDownload: canDownload
                                         });
                                     }}
                                     photoUrl={item.photoUrl}
+                                    canSharePhotos={canSharePhotos}
                                 />
                             )}
                         />
@@ -361,7 +366,7 @@ const UserGalleryScreen: React.FC = () => {
     );
 };
 
-const GalleryCard: React.FC<{ name: string; image: string; activeTab: 'your' | 'live', onClick: () => void, photoUrl: string }> = ({ name, image, activeTab, onClick, photoUrl }) => {
+const GalleryCard: React.FC<{ name: string; image: string; activeTab: 'your' | 'live', onClick: () => void, photoUrl: string, canSharePhotos: boolean }> = ({ name, image, activeTab, onClick, photoUrl, canSharePhotos }) => {
     const [copied, setCopied] = useState(false);
 
     const handleShareLink = async () => {
@@ -407,9 +412,11 @@ const GalleryCard: React.FC<{ name: string; image: string; activeTab: 'your' | '
             {activeTab === 'live' ? (
                 <View style={styles.galleryCardLiveBar}>
                     <Text style={styles.galleryCardLiveName} numberOfLines={1}>{name}</Text>
-                    <TouchableOpacity onPress={handleShareLink} style={styles.shareBtn}>
-                        <Share2 color={'#000'} size={wp(5)} />
-                    </TouchableOpacity>
+                    {canSharePhotos && (
+                        <TouchableOpacity onPress={handleShareLink} style={styles.shareBtn}>
+                            <Share2 color={'#000'} size={wp(5)} />
+                        </TouchableOpacity>
+                    )}
                     {copied && (
                         <View style={styles.copiedToast}>
                             <Text style={styles.copiedToastText}>Link copied!</Text>
@@ -418,9 +425,11 @@ const GalleryCard: React.FC<{ name: string; image: string; activeTab: 'your' | '
                 </View>
             ) : (
                 <View style={styles.galleryCardBtnBar}>
-                    <TouchableOpacity onPress={handleShareLink} style={styles.shareBtn}>
-                        <Share2 color={'#000'} size={wp(5)} />
-                    </TouchableOpacity>
+                    {canSharePhotos && (
+                        <TouchableOpacity onPress={handleShareLink} style={styles.shareBtn}>
+                            <Share2 color={'#000'} size={wp(5)} />
+                        </TouchableOpacity>
+                    )}
                     {copied && (
                         <View style={styles.copiedToast}>
                             <Text style={styles.copiedToastText}>Link copied!</Text>
