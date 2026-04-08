@@ -183,5 +183,43 @@ export const guestServices = {
             }
             throw new Error(errorMsg);
         }
+    },
+
+    /**
+     * Delete a photo from an event.
+     * @param eventId - The event ID
+     * @param photoId - The photo ID
+     * @returns Promise with deletion status
+     */
+    deletePhoto: async (
+        eventId: string,
+        photoId: string
+    ): Promise<any> => {
+        if (!eventId || !photoId) {
+            throw new Error('event ID and photo ID are required');
+        }
+
+        try {
+            const response = await apiService<any>(
+                `/guests/${eventId}/photos/${photoId}`,
+                'DELETE'
+            );
+            return response.data;
+        } catch (error: unknown) {
+            console.error('Error deleting photo:', error);
+            let errorMsg = 'Failed to delete photo. Please try again.';
+            if (
+                typeof error === 'object' &&
+                error !== null &&
+                'response' in error &&
+                (error as { response?: { data?: { error?: string }, statusText?: string } }).response?.data
+            ) {
+                const errObj = error as { response?: { data?: { error?: string }, statusText?: string } };
+                errorMsg = `Failed to delete photo: ${errObj.response?.data?.error || errObj.response?.statusText || 'Unknown error'}`;
+            } else if (error instanceof Error) {
+                errorMsg = `Failed to delete photo: ${error.message}`;
+            }
+            throw new Error(errorMsg);
+        }
     }
 };

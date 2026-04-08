@@ -28,6 +28,18 @@ import OverlayGuidelinesModal from '../../components/OverlayGuidelinesModal';
 import { hp, wp } from '../../contants/StyleGuide';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+/**
+ * Parse a "YYYY-MM-DD" date string in LOCAL time (not UTC).
+ * `new Date("YYYY-MM-DD")` is interpreted as UTC midnight by the JS spec,
+ * which shifts the visible date backward for users west of UTC (e.g. ET).
+ * This helper avoids that by using the multi-argument Date constructor,
+ * which always creates a local-timezone date.
+ */
+const parseDateLocal = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day, 0, 0, 0, 0);
+};
+
 // Returns a responsive calendar width capped at 480px for large screens (iPad)
 const getCalendarWidth = () => {
     const screenWidth = Dimensions.get('window').width;
@@ -116,7 +128,7 @@ const CreateEventScreen: React.FC = () => {
     const { step1Data, updateStep1Data, isStep1Valid, resetEventData } = useCreateEvent();
 
     const [eventDate, setEventDate] = useState<Date | null>(
-        step1Data.date ? new Date(step1Data.date) : null
+        step1Data.date ? parseDateLocal(step1Data.date) : null
     );
 
     // State for showing/hiding the date picker modal
@@ -150,9 +162,11 @@ const CreateEventScreen: React.FC = () => {
     }, [step1Data.type, updateStep1Data]);
 
     // Keep eventDate in sync with step1Data.date (important for edit mode where data loads async)
+    // NOTE: parseDateLocal is used instead of new Date(str) to avoid UTC-to-local offset
+    // shifting the date backward for Eastern Time users.
     useEffect(() => {
         if (step1Data.date) {
-            setEventDate(new Date(step1Data.date));
+            setEventDate(parseDateLocal(step1Data.date));
         }
     }, [step1Data.date]);
 

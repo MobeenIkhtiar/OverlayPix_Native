@@ -7,7 +7,7 @@ import Loader from '../../../components/Loader';
 import { guestServices } from '../../../services/guestsService';
 import { HEIGHT, hp, wp } from '../../../contants/StyleGuide';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SwitchCamera } from 'lucide-react-native';
+import { SwitchCamera, Zap, ZapOff } from 'lucide-react-native';
 
 import { FILTERS } from './filterMatrices';
 import SkiaFilteredImage from './SkiaFilteredImage';
@@ -67,14 +67,11 @@ const TakePictureScreen = () => {
         requestPermission();
     }, []);
 
-    // Track camera ready state
+    // Reset camera readiness whenever the prerequisites change.
+    // The actual "ready" signal comes from onInitialized on the <Camera> component,
+    // which fires as soon as the native camera session is configured — no artificial delay.
     useEffect(() => {
-        if (cameraPermission === 'granted' && device && !isPreviewMode) {
-            const timer = setTimeout(() => {
-                setIsCameraReady(true);
-            }, 500);
-            return () => clearTimeout(timer);
-        } else {
+        if (cameraPermission !== 'granted' || !device || isPreviewMode) {
             setIsCameraReady(false);
         }
     }, [cameraPermission, device, isPreviewMode]);
@@ -129,12 +126,10 @@ const TakePictureScreen = () => {
     }, []);
 
     // Flash toggle handler
-    const handleToggleFlash = async () => {
+    const handleToggleFlash = () => {
         setFlashError(null);
         setFlashOn((prev) => !prev);
     };
-
-    const turnOffFlash = async () => setFlashOn(false);
 
     // Switch between front and back camera
     const handleSwitchCamera = () => {
@@ -143,10 +138,8 @@ const TakePictureScreen = () => {
         setIsCameraReady(false);
     };
 
-    // Capture handling with Skia for proper transparency
+    // Capture handler — optimised for minimal latency
     const handleCapture = async () => {
-        console.log('Capture attempt - Permission:', cameraPermission, 'Device:', !!device, 'Device ID:', device?.id, 'Ref:', !!cameraRef.current, 'Ready:', isCameraReady);
-
         if (cameraPermission !== 'granted') {
             Alert.alert('Permission Required', 'Camera permission is required to take photos.');
             return;
@@ -168,31 +161,40 @@ const TakePictureScreen = () => {
             return;
         }
 
-        await turnOffFlash();
+        // Snapshot flash intent BEFORE any state mutations so the closure
+        // value is correct when passed to takePhoto.
+        const captureFlash = flashOn;
+
+        // Turn off the torch immediately (non-blocking, fire-and-forget).
+        // This does NOT delay takePhoto — we no longer await the state update
+        // or spin a 100ms timer waiting for the hardware to toggle.
+        if (flashOn) setFlashOn(false);
 
         try {
             setLoading(true);
             setHideButton(true);
-            await new Promise<void>(resolve => setTimeout(() => resolve(), 100));
 
-            const photo = await cameraRef.current.takePhoto({ flash: flashOn ? 'on' : 'off' });
+            // takePhoto is called immediately — zero artificial delay.
+            const photo = await cameraRef.current.takePhoto({
+                flash: captureFlash ? 'on' : 'off',
+            });
             const cameraUri = `file://${photo.path}`;
 
             setCapturedImage(cameraUri);
             setIsPreviewMode(true);
 
-            // Generate a lightweight thumbnail asynchronously for the filters 
-            // so 10 filters don't parse the 12MP image synchronously and freeze Android JS thread
+            // Generate a lightweight thumbnail asynchronously for the filters
+            // so the 12MP image is never decoded synchronously on the JS thread.
             requestAnimationFrame(() => {
                 setTimeout(() => {
-                    applyFilterToImage(cameraUri, 'none', 300).then(uri => {
-                        setThumbnailUri(uri);
-                    }).catch(err => console.error('Thumbnail generation error:', err));
+                    applyFilterToImage(cameraUri, 'none', 300)
+                        .then(uri => setThumbnailUri(uri))
+                        .catch(err => console.error('Thumbnail generation error:', err));
                 }, 50);
             });
         } catch (err: any) {
             console.error('Capture error:', err);
-            Alert.alert("Error", err?.message || "Failed to take photo. Please try again.");
+            Alert.alert('Error', err?.message || 'Failed to take photo. Please try again.');
         } finally {
             setLoading(false);
             setHideButton(false);
@@ -306,9 +308,11 @@ const TakePictureScreen = () => {
                             disabled={!flashSupported || cameraPosition === 'front'}
                             style={[styles.flashButton, (!flashSupported || cameraPosition === 'front') && styles.disabledFlashButton]}
                         >
-                            <Text>
-                                {flashOn ? "⚡" : "⚡︎"}
-                            </Text>
+                            {flashOn ? (
+                                <Zap size={wp(5.5)} color="#00ff88" fill="#00ff88" />
+                            ) : (
+                                <ZapOff size={wp(5.5)} color="#fff" />
+                            )}
                         </TouchableOpacity>
                         {flashError && (
                             <Text style={styles.flashError}>{flashError}</Text>

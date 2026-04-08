@@ -57,8 +57,8 @@ const PhotoSavedScreen = () => {
             <ScrollView style={{ flex: 1 }}>
                 {/* Logo and App Name */}
                 <View style={styles.header}>
-                    <Image source={icons.logo} style={styles.logo} resizeMode="contain" />
-                    <Text style={styles.appName}>Overlay Pix</Text>
+                    {/* <Image source={icons.logo} style={styles.logo} resizeMode="contain" />
+                    <Text style={styles.appName}>Overlay Pix</Text> */}
                     <Text style={styles.photoSaved}>Photo Saved!!</Text>
                 </View>
 
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
         // Simulate gradient: from top to bottom
     },
     header: {
-        marginTop: hp(6),
+        marginTop: hp(2),
         alignItems: 'center',
     },
     logo: {
@@ -156,13 +156,13 @@ const styles = StyleSheet.create({
     photoPreviewContainer: {
         width: '100%',
         alignItems: 'center',
-        marginTop: hp(3),
+        marginTop: hp(1),
         maxWidth: wp(96),
         alignSelf: 'center',
     },
     photoPreview: {
-        width: '75%',
-        height: hp(50),
+        width: '90%',
+        height: hp(43),
         borderRadius: wp(4),
         backgroundColor: '#fff',
     },

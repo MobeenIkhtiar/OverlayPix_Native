@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, } from 'react-native';
-import { Eye, SquarePen, type LucideIcon, QrCode } from 'lucide-react-native';
+import { Eye, SquarePen, type LucideIcon, QrCode, Camera } from 'lucide-react-native';
 import { wp, hp } from '../contants/StyleGuide';
 
 interface ActionButtonProps {
@@ -85,6 +85,7 @@ interface EventCardProps {
     onEdit?: () => void;
     onUpgrade?: () => void;
     onQRCode?: () => void;
+    onTakePicture?: () => void;
     storageExpired?: boolean;
 }
 
@@ -99,6 +100,7 @@ const EventCard: React.FC<EventCardProps> = ({
     onEdit,
     onUpgrade,
     onQRCode,
+    onTakePicture,
     storageExpired,
 }) => {
     // Normalize status to string and check for "expired" (case-insensitive)
@@ -146,6 +148,7 @@ const EventCard: React.FC<EventCardProps> = ({
                         disabled={storageExpired}
                     // disabled={true}
                     />
+
                     <ActionButton
                         icon={SquarePen}
                         label="Edit"
@@ -165,6 +168,13 @@ const EventCard: React.FC<EventCardProps> = ({
                         label="QR Code"
                         className="border-[0.5px] border-[#E6E6E6] px-5 text-[#666666] hover:bg-gray-50"
                         onClick={onQRCode}
+                        disabled={isExpired}
+                    />
+                    <ActionButton
+                        icon={Camera}
+                        label="Take Picture"
+                        className="border-[0.5px] border-[#E6E6E6] px-5 text-[#666666] hover:bg-gray-50"
+                        onClick={onTakePicture}
                         disabled={isExpired}
                     />
                 </View>

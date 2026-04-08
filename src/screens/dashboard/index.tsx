@@ -26,6 +26,7 @@ type EventType = {
     photosCount: number;
     guestsCount: number;
     storageExpired: boolean;
+    overlayUrl?: string;
     // Add other fields as needed
 };
 
@@ -55,7 +56,7 @@ const DashboardScreen: React.FC = () => {
                 setLoading(true);
                 const endPoint = activeTab === 'your' ? endPoints.dashboard : 'guests/events';
                 const data: any = await dashboardService.getDashboardData(endPoint);
-
+                console.log("dashboard data =>>>>>>>>>>>>>", data)
                 if (activeTab === 'your') {
                     setYourDashboardData(data);
                 } else {
@@ -252,6 +253,13 @@ const DashboardScreen: React.FC = () => {
                                             //  navigation.navigate(`upgradeEvent`, { eventId: event.eventId }) 
                                         }}
                                         onQRCode={() => { navigation.navigate(`inviteGuestEasily`, { eventId: event.eventId }) }}
+                                        onTakePicture={() => {
+                                            navigation.navigate('takePicture', {
+                                                eventId: event.eventId,
+                                                overlayUrl: event.overlayUrl,
+                                                fromDashboard: true
+                                            })
+                                        }}
                                     />
                                 </View>
                             ))}
@@ -294,10 +302,13 @@ const DashboardScreen: React.FC = () => {
                                         onViewImages={() => {
                                             navigation.navigate(`userGallery`, { eventId: event?.eventId, fromDashboard: true })
                                         }}
-                                    // // Hide edit/upgrade/qr for joined events
-                                    // onEdit={undefined}
-                                    // onUpgrade={undefined}
-                                    // onQRCode={undefined}
+                                        onTakePicture={() => {
+                                            navigation.navigate('takePicture', {
+                                                eventId: event.eventId,
+                                                overlayUrl: event.overlayUrl,
+                                                fromDashboard: true
+                                            })
+                                        }}
                                     />
                                 </View>
                             ))}

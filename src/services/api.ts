@@ -20,6 +20,7 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 600000
 });
 
 // Get Firebase ID token if logged in

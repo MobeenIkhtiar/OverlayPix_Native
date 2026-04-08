@@ -23,6 +23,7 @@ export const termsService = {
                     throw new Error('Anonymous sign-in failed or did not return a uid.');
                 }
                 await AsyncStorage.setItem('token', anonRes.token);
+                await AsyncStorage.setItem('uid', anonRes.user.uid);   // ← persist anon UID for ownership checks
                 await AsyncStorage.setItem('isAnonymous', 'true');
                 userId = anonRes.user.uid
                 // console.log('anon Token=>>>>>>>>.', anonRes.token);

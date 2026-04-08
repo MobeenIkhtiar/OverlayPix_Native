@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, FlatList, TextInput, ActivityIndicator, StyleSheet, ScrollView, Share, Alert } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -6,7 +6,7 @@ import Header from '../../../components/Header';
 import PhotoLimitModal from '../../../components/PhotoLimitModal';
 import { guestServices } from '../../../services/guestsService';
 import { downloadImages, proxyOverlayImage, showErrorToastWithSupport } from '../../../utils/HelperFunctions';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { hp, wp } from '../../../contants/StyleGuide';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from '@react-native-firebase/firestore';
@@ -63,9 +63,12 @@ const UserGalleryScreen: React.FC = () => {
         checkAuthAndRole();
     }, []);
 
-    useEffect(() => {
-        fetchImages();
-    }, [activeTab, eventID]);
+    // Re-fetch whenever the screen comes into focus (e.g., after navigating back from ViewImageScreen)
+    useFocusEffect(
+        useCallback(() => {
+            fetchImages();
+        }, [activeTab, eventID])
+    );
 
     const fetchImages = async () => {
         if (
@@ -353,11 +356,12 @@ const UserGalleryScreen: React.FC = () => {
 
                 {/* Floating Action Button */}
                 <TouchableOpacity
-                    style={styles.fab}
+                    style={[styles.fab, galleryImages?.eventStatus === 'expired' && styles.fabDisabled]}
                     accessibilityLabel="Add Photo"
                     onPress={handleTakePicture}
+                    disabled={galleryImages?.eventStatus === 'expired'}
                 >
-                    <Camera color={'#fff'} size={wp(7)} />
+                    <Camera color={galleryImages?.eventStatus === 'expired' ? '#ccc' : '#fff'} size={wp(7)} />
                 </TouchableOpacity>
 
                 <PhotoLimitModal open={showPhotoLimitModal} onClose={() => setShowPhotoLimitModal(false)} />
@@ -721,6 +725,10 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 10,
         zIndex: 99
+    },
+    fabDisabled: {
+        backgroundColor: '#E5E7EB',
+        shadowOpacity: 0.1,
     },
     fabPlus: {
         fontSize: wp(11),

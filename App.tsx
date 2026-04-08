@@ -42,12 +42,13 @@ const App = () => {
   return (
     <>
       {/* StatusBar */}
-      <StatusBar
-        backgroundColor="#fff"
-        barStyle="dark-content"
-      />
+
 
       <SafeAreaProvider style={styles.container}>
+        <StatusBar
+          backgroundColor="#fff"
+          barStyle="dark-content"
+        />
         <CreateEventProvider>
           <AppNavigator />
           <Toast />

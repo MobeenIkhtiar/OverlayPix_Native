@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dashboardService } from '../../../services/dashboardService';
+import { endPoints } from '../../../services/Endpoints';
 import JoinedEventCard from '../../../components/JoinedEventCard';
 import Header from '../../../components/Header';
 import { wp, hp } from '../../../contants/StyleGuide';
@@ -27,6 +28,7 @@ interface JoinedEvent {
     photosUploaded?: number;
     guestName?: number;
     storageExpired?: boolean;
+    overlayUrl?: string;
     [key: string]: unknown;
 }
 
@@ -47,7 +49,8 @@ const JoinedEvents: React.FC = () => {
         const fetchDashboardData = async () => {
             try {
                 setLoading(true);
-                const endPoint = 'guests/events';
+                const activeTab = 'joined'; // This screen is specifically for joined events
+                const endPoint = (activeTab as string) === 'your' ? endPoints.dashboard : 'guests/events';
                 const data: any = await dashboardService.getDashboardData(endPoint);
 
                 console.log('joined events data=>>>>>>>>', data);
@@ -119,6 +122,13 @@ const JoinedEvents: React.FC = () => {
             onViewImages={() => {
                 navigation.navigate('userGallery', {
                     eventId: item?.eventId,
+                    fromDashboard: true,
+                });
+            }}
+            onTakePicture={() => {
+                navigation.navigate('takePicture', {
+                    eventId: item.eventId,
+                    overlayUrl: item.overlayUrl,
                     fromDashboard: true,
                 });
             }}

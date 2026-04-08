@@ -9,11 +9,12 @@ import { hp, wp } from '../../../contants/StyleGuide';
 import { downloadImages, showErrorToastWithSupport } from '../../../utils/HelperFunctions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Share2, Download } from 'lucide-react-native';
+import { ArrowLeft, Share2, Download, Trash2 } from 'lucide-react-native';
 
 type Photo = {
     photoUrl: string;
     guestName?: string;
+    guestId?: string;
     [key: string]: unknown;
 };
 
@@ -41,6 +42,7 @@ const ViewImageScreen: React.FC = () => {
 
     // For share feedback
     const [copied, setCopied] = useState<boolean>(false);
+    const [currentUid, setCurrentUid] = useState<string | null>(null);
 
     useEffect(() => {
         const checkIsAnonymous = async () => {
@@ -53,6 +55,16 @@ const ViewImageScreen: React.FC = () => {
         };
 
         checkIsAnonymous();
+
+        const fetchUid = async () => {
+            try {
+                const uid = await AsyncStorage.getItem('uid');
+                setCurrentUid(uid);
+            } catch (error) {
+                console.error('Error reading current uid:', error);
+            }
+        };
+        fetchUid();
     }, []);
 
     useEffect(() => {
@@ -146,10 +158,10 @@ const ViewImageScreen: React.FC = () => {
             }
         }
     };
-    
+
     const handleDownload = () => {
         if (!mainImage) return;
-        
+
         Alert.alert(
             "Download Image",
             "Are you sure you want to download this image?",
@@ -158,6 +170,41 @@ const ViewImageScreen: React.FC = () => {
                 {
                     text: "Yes",
                     onPress: () => downloadImages([mainImage], allImages.eventInfo?.name || 'Event')
+                }
+            ]
+        );
+    };
+
+    const handleDeleteImage = async () => {
+        const currentPhoto = photos[selectedImageIdx];
+        const photoId = (currentPhoto?.id || (currentPhoto as any)?._id) as string;
+
+        if (!photoId) {
+            showErrorToastWithSupport("Cannot delete: Image ID not found");
+            return;
+        }
+
+        Alert.alert(
+            "Delete Image",
+            "Are you sure you want to delete this image permanently?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            setLoading(true);
+                            await guestServices.deletePhoto(eventID, photoId);
+                            Alert.alert("Success", "Image deleted successfully", [
+                                { text: "OK", onPress: () => navigation.goBack() }
+                            ]);
+                        } catch (err: any) {
+                            showErrorToastWithSupport(err.message || "Failed to delete image");
+                        } finally {
+                            setLoading(false);
+                        }
+                    }
                 }
             ]
         );
@@ -210,7 +257,7 @@ const ViewImageScreen: React.FC = () => {
                         {/* Event Info & Actions */}
                         <View style={styles.infoRow}>
                             <Text style={styles.guestName}>
-                                {mainImageGuestName}
+                                {mainImageGuestName + "'s gallery"}
                             </Text>
                             <View style={styles.actionsRow}>
                                 {canDownload && (
@@ -227,6 +274,14 @@ const ViewImageScreen: React.FC = () => {
                                         onPress={() => handleShareLink()}
                                     >
                                         <Share2 color={'#000'} size={wp(5)} />
+                                    </TouchableOpacity>
+                                )}
+                                {currentUid && photos[selectedImageIdx]?.guestId === currentUid && (
+                                    <TouchableOpacity
+                                        style={[styles.shareButton, { marginLeft: wp(2) }]}
+                                        onPress={handleDeleteImage}
+                                    >
+                                        <Trash2 color={'#EF4444'} size={wp(5)} />
                                     </TouchableOpacity>
                                 )}
                             </View>

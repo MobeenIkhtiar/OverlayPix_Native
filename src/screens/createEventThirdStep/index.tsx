@@ -128,7 +128,11 @@ const CreateEventThirdStep: React.FC = () => {
                     title={isEditMode ? "Edit Event" : "Create Event"}
                     subtitle=""
                     logoHover={true}
-                    setUserName={(name) => updateStep3Data({ hostName: name })}
+                    setUserName={(name) => {
+                        if (!step3Data.hostName) {
+                            updateStep3Data({ hostName: name });
+                        }
+                    }}
                 />
                 {/* stepper */}
                 <Stepper steps={4} activeStep={3} />

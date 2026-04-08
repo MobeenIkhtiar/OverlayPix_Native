@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Eye, type LucideIcon } from 'lucide-react-native';
+import { Eye, Camera, type LucideIcon } from 'lucide-react-native';
 import { wp, hp } from '../contants/StyleGuide';
 
 interface ActionButtonProps {
@@ -46,6 +46,7 @@ interface EventCardProps {
     photos?: number;
     guests?: number;
     onViewImages?: () => void;
+    onTakePicture?: () => void;
     storageExpired?: boolean;
 }
 
@@ -57,6 +58,7 @@ const JoinedEventCard: React.FC<EventCardProps> = ({
     photos,
     guests,
     onViewImages,
+    onTakePicture,
     storageExpired,
 }) => {
     // Normalize status to string for comparison
@@ -95,7 +97,12 @@ const JoinedEventCard: React.FC<EventCardProps> = ({
                         label="View Event"
                         onPress={onViewImages}
                         disabled={storageExpired}
-                    // disabled={true}
+                    />
+                    <ActionButton
+                        icon={Camera}
+                        label="Take Picture"
+                        onPress={onTakePicture}
+                        disabled={isExpired}
                     />
                 </View>
             </View>
@@ -164,9 +171,10 @@ const styles = StyleSheet.create({
         color: '#64748B',
     },
     buttonSection: {
-        justifyContent: 'center',
-        alignItems: 'flex-end',
-        flex: 0.8,
+        // justifyContent: 'center',
+        // alignItems: 'flex-end',
+        // flex: 0.8,
+        gap: hp(.8),
     },
     actionButton: {
         flexDirection: 'row',
