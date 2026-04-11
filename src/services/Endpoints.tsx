@@ -6,7 +6,6 @@ export const BASEURL = 'https://overlay-pix-back.onrender.com/api';
 // 15  4g
 
 export const endPoints = {
-    // login: '',
     // signup: '/auth/signup',
     dashboard: '/events/dashboard',
     createEvent: '/events/create',
