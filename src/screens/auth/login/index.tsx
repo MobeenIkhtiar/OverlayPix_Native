@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 // import ConversionBanner from '../../../components/ConversionBanner';
 import { Mail, LockKeyhole, ChevronLeft } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { loginWithEmail, loginWithGoogle, loginWithApple, loginWithFacebook, db } from '../../../services/loginService.ts';
+import { loginWithEmail, loginWithGoogle, loginWithApple, loginWithFacebook, db, linkProviderToExistingAccount, auth } from '../../../services/loginService.ts';
 import { doc, getDoc } from '@react-native-firebase/firestore';
 import { showErrorToastWithSupport } from '../../../utils/HelperFunctions.ts';
 import CustomInput from '../../../components/CustomInput.tsx';
@@ -12,6 +12,7 @@ import { icons } from '../../../contants/Icons.ts';
 import CustomButton from '../../../components/CustomButton.tsx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { hp, wp } from '../../../contants/StyleGuide.tsx';
 
 const Login: React.FC = () => {
@@ -20,6 +21,7 @@ const Login: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
     const [checkingAuth, setCheckingAuth] = useState<boolean>(false);
+    const [pendingCredential, setPendingCredential] = useState<any>(null);
     // const [isMobileScreen, setIsMobileScreen] = useState<boolean>(false);
     // const [showConversionBanner, setShowConversionBanner] = useState<boolean>(false);
     // const [conversionProvider, setConversionProvider] = useState<'Google' | 'Facebook' | 'Apple' | 'Email'>('Google');
@@ -50,6 +52,32 @@ const Login: React.FC = () => {
         } catch (err) {
             console.error('Error fetching user role:', err);
             return null;
+        }
+    };
+    
+    // Helper to check for and link account if a pending credential exists
+    const checkAndLinkAccount = async (user: any) => {
+        if (pendingCredential) {
+            try {
+                setLoading(true);
+                await linkProviderToExistingAccount(pendingCredential);
+                setPendingCredential(null);
+                Toast.show({
+                    type: 'success',
+                    text1: 'Success!',
+                    text2: 'Facebook account linked successfully.',
+                    position: 'top',
+                    visibilityTime: 4000,
+                });
+            } catch (linkError: any) {
+                console.error('Error linking from UI:', linkError);
+                // If the error is that the email is already linked, we can ignore it as it's already "linked" conceptually
+                if (linkError.code !== 'auth/credential-already-in-use') {
+                    showErrorToastWithSupport('Failed to link Facebook account automatically.');
+                }
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
@@ -162,6 +190,9 @@ const Login: React.FC = () => {
             // Always remove anonymous flag on successful login
             await removeItem('isAnonymous');
 
+            // Handle account linking if there's a pending credential
+            await checkAndLinkAccount(user);
+
             if (isAnonymous) {
                 if (role === 'guest') {
                     safeNavigate('/joinedEvent', undefined, true);
@@ -219,6 +250,9 @@ const Login: React.FC = () => {
 
                 // Always remove anonymous flag on successful login
                 await removeItem('isAnonymous');
+
+                // Handle account linking if there's a pending credential
+                await checkAndLinkAccount(res.user);
 
                 const role = await fetchUserRole(res.user.uid);
 
@@ -308,7 +342,57 @@ const Login: React.FC = () => {
                 setError('Facebook login failed: No user returned.');
                 showErrorToastWithSupport('Facebook login failed: No user returned.');
             }
-        } catch (facebookError: unknown) {
+        } catch (facebookError: any) {
+            console.log('Facebook Login Error details:', {
+                code: facebookError.code,
+                message: facebookError.message,
+                email: facebookError.email,
+                hasCredential: !!facebookError.credential
+            });
+
+            const errCode = facebookError.code || '';
+            const errMessage = facebookError.message || '';
+
+            if (errCode.includes('account-exists-with-different-credential') || 
+                errMessage.includes('account-exists-with-different-credential')) {
+                
+                const email = facebookError.email || facebookError.customData?.email || (facebookError.userInfo && facebookError.userInfo.email);
+                const credential = facebookError.credential || facebookError.customData?.credential || (facebookError.userInfo && facebookError.userInfo.credential);
+
+                if (email) {
+                    try {
+                        const providers = await auth.fetchSignInMethodsForEmail(email);
+                        let providerName = 'another method';
+                        if (providers.includes('google.com')) providerName = 'Google';
+                        else if (providers.includes('password')) providerName = 'Email/Password';
+                        else if (providers.includes('apple.com')) providerName = 'Apple';
+
+                        if (credential) {
+                            setPendingCredential(credential);
+                        }
+                        
+                        Alert.alert(
+                            'Account Already Exists',
+                            `An account already exists with your email (${email}) using ${providerName}. Please sign in with ${providerName} to verify and link your Facebook account.`,
+                            [{ text: 'OK' }]
+                        );
+                        setLoading(false);
+                        return;
+                    } catch (fetchError) {
+                        console.error('Error fetching sign in methods:', fetchError);
+                    }
+                } else if (credential) {
+                    // We have credential but no email, still set it
+                    setPendingCredential(credential);
+                    Alert.alert(
+                        'Account Already Exists',
+                        'An account already exists with this email. Please sign in with your original method (Google or Email) to link your Facebook account.',
+                        [{ text: 'OK' }]
+                    );
+                    setLoading(false);
+                    return;
+                }
+            }
             const msg = 'Facebook login failed: ' + (facebookError instanceof Error ? facebookError.message : String(facebookError));
             setError(msg);
             showErrorToastWithSupport(msg);
@@ -335,6 +419,9 @@ const Login: React.FC = () => {
                 // Always remove anonymous flag on successful login
                 await removeItem('isAnonymous');
 
+                // Handle account linking if there's a pending credential
+                await checkAndLinkAccount(res.user);
+
                 const role = await fetchUserRole(res.user.uid);
 
                 if (shareId && role === 'guest' && !isGuest) {
@@ -356,8 +443,57 @@ const Login: React.FC = () => {
                 setError('apple login failed: No user returned.');
                 showErrorToastWithSupport('Apple login failed: No user returned.');
             }
-        } catch (err: unknown) {
-            const msg = 'Apple login failed: ' + (err instanceof Error ? err.message : String(err));
+        } catch (appleError: any) {
+            console.log('Apple Login Error details:', {
+                code: appleError.code,
+                message: appleError.message,
+                email: appleError.email,
+                hasCredential: !!appleError.credential
+            });
+
+            const errCode = appleError.code || '';
+            const errMessage = appleError.message || '';
+
+            if (errCode.includes('account-exists-with-different-credential') || 
+                errMessage.includes('account-exists-with-different-credential')) {
+                
+                const email = appleError.email || appleError.customData?.email || (appleError.userInfo && appleError.userInfo.email);
+                const credential = appleError.credential || appleError.customData?.credential || (appleError.userInfo && appleError.userInfo.credential);
+
+                if (email) {
+                    try {
+                        const providers = await auth.fetchSignInMethodsForEmail(email);
+                        let providerName = 'another method';
+                        if (providers.includes('google.com')) providerName = 'Google';
+                        else if (providers.includes('password')) providerName = 'Email/Password';
+                        else if (providers.includes('facebook.com')) providerName = 'Facebook';
+
+                        if (credential) {
+                            setPendingCredential(credential);
+                        }
+                        
+                        Alert.alert(
+                            'Account Already Exists',
+                            `An account already exists with your email (${email}) using ${providerName}. Please sign in with ${providerName} to verify and link your account.`,
+                            [{ text: 'OK' }]
+                        );
+                        setLoading(false);
+                        return;
+                    } catch (fetchError) {
+                        console.error('Error fetching sign in methods:', fetchError);
+                    }
+                } else if (credential) {
+                    setPendingCredential(credential);
+                    Alert.alert(
+                        'Account Already Exists',
+                        'An account already exists with this email. Please sign in with your original method (Google or Email) to link your account.',
+                        [{ text: 'OK' }]
+                    );
+                    setLoading(false);
+                    return;
+                }
+            }
+            const msg = 'Apple login failed: ' + (appleError instanceof Error ? appleError.message : String(appleError));
             setError(msg);
             showErrorToastWithSupport(msg);
         } finally {

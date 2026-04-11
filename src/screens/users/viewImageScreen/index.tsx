@@ -26,6 +26,11 @@ type EventInfo = {
 type AllImagesResponse = {
     eventInfo?: EventInfo;
     photos?: Photo[];
+    guestInfo?: {
+        isEventOwner?: boolean;
+        name?: string;
+        photosUploaded?: number;
+    };
 };
 
 const ViewImageScreen: React.FC = () => {
@@ -276,7 +281,7 @@ const ViewImageScreen: React.FC = () => {
                                         <Share2 color={'#000'} size={wp(5)} />
                                     </TouchableOpacity>
                                 )}
-                                {currentUid && photos[selectedImageIdx]?.guestId === currentUid && (
+                                {currentUid && (photos[selectedImageIdx]?.guestId === currentUid || allImages?.guestInfo?.isEventOwner) && (
                                     <TouchableOpacity
                                         style={[styles.shareButton, { marginLeft: wp(2) }]}
                                         onPress={handleDeleteImage}

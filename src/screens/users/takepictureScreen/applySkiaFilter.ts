@@ -186,12 +186,23 @@ export const applyFilterToImage = async (
 };
 
 /**
+ * Canonical output dimensions — every uploaded photo is normalised to this
+ * exact size regardless of the capturing device's native camera resolution.
+ * 1080 × 1440 (3:4 portrait) matches the full-screen camera preview shown
+ * to the user and keeps file sizes predictable (~300 KB at q=85).
+ */
+const CANONICAL_WIDTH = 1080;
+const CANONICAL_HEIGHT = 1440;
+
+/**
  * Optimised save path — renders the filtered + overlay image and writes it
- * to a temporary JPEG file instead of returning a massive base64 data URI.
+ * to a temporary JPEG file at a fixed canonical resolution.
  *
  * Key differences from `applyFilterToImage`:
- * - Caps the output resolution to `maxSide` (default 2048) — still high
- *   quality but 6× fewer pixels than a raw 12MP camera shot.
+ * - Outputs a FIXED 1080×1440 canvas for every device — eliminates the
+ *   per-device size inconsistency caused by differing native resolutions.
+ * - The source image is drawn with "cover" logic so the full frame is always
+ *   filled with no letterboxing, matching what the user saw in the viewfinder.
  * - Encodes as JPEG (quality 85) instead of PNG — 10-20× smaller file.
  * - Writes directly to a temp file via RNFS — zero base64-string overhead.
  * - Returns a file:// URI ready for FormData upload.
@@ -202,7 +213,6 @@ export const applyFilterToFile = async (
     uri: string,
     filterName: string,
     overlayUri?: string | null,
-    maxSide: number = 2048,
     jpegQuality: number = 85,
 ): Promise<string> => {
     // Fast path: no processing needed
@@ -216,18 +226,13 @@ export const applyFilterToFile = async (
             return uri;
         }
 
-        let imgW = skiaImage.width();
-        let imgH = skiaImage.height();
-
-        // 2. Cap to maxSide while preserving aspect ratio
-        if (imgW > maxSide || imgH > maxSide) {
-            const scale = maxSide / Math.max(imgW, imgH);
-            imgW = Math.round(imgW * scale);
-            imgH = Math.round(imgH * scale);
-        }
+        // 2. Use the fixed canonical output size — every device produces the
+        //    same pixel dimensions regardless of native camera resolution.
+        const outW = CANONICAL_WIDTH;
+        const outH = CANONICAL_HEIGHT;
 
         // 3. Off-screen render with filter
-        const surface = Skia.Surface.Make(imgW, imgH);
+        const surface = Skia.Surface.Make(outW, outH);
         if (!surface) {
             console.warn('applyFilterToFile: could not create Skia surface');
             return uri;
@@ -248,11 +253,22 @@ export const applyFilterToFile = async (
             paint.setColorFilter(colorFilter);
         }
 
-        const srcRect = Skia.XYWHRect(0, 0, skiaImage.width(), skiaImage.height());
-        const dstRect = Skia.XYWHRect(0, 0, imgW, imgH);
+        // "Cover" fill: scale the source image so it completely fills the
+        // canonical canvas (same behaviour as the camera viewfinder preview).
+        const srcW = skiaImage.width();
+        const srcH = skiaImage.height();
+        const scale = Math.max(outW / srcW, outH / srcH);
+        const drawW = srcW * scale;
+        const drawH = srcH * scale;
+        const offsetX = (outW - drawW) / 2;
+        const offsetY = (outH - drawH) / 2;
+
+        const srcRect = Skia.XYWHRect(0, 0, srcW, srcH);
+        const dstRect = Skia.XYWHRect(offsetX, offsetY, drawW, drawH);
         canvas.drawImageRect(skiaImage, srcRect, dstRect, paint);
 
-        // 4. Draw overlay (composited with same filter)
+        // 4. Draw overlay stretched to fill the canonical canvas
+        const overlayDstRect = Skia.XYWHRect(0, 0, outW, outH);
         if (overlayUri) {
             const overlayImage = await loadSkiaImage(overlayUri);
             if (overlayImage) {
@@ -264,7 +280,7 @@ export const applyFilterToFile = async (
                 canvas.drawImageRect(
                     overlayImage,
                     Skia.XYWHRect(0, 0, overlayImage.width(), overlayImage.height()),
-                    dstRect,
+                    overlayDstRect,
                     overlayPaint,
                 );
             }

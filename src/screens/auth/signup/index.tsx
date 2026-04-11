@@ -4,14 +4,16 @@ import { Mail, LockKeyhole, ChevronLeft } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 // import { apiService } from '../../../services/api';
 // import { endPoints } from '../../../services/Endpoints';
-import { db, loginWithApple, loginWithGoogle, loginWithFacebook, registerWithEmail } from '../../../services/loginService.ts';
+import { db, loginWithApple, loginWithGoogle, loginWithFacebook, registerWithEmail, linkProviderToExistingAccount, auth } from '../../../services/loginService.ts';
 import { doc, getDoc } from '@react-native-firebase/firestore';
 import { icons } from '../../../contants/Icons.ts';
-import { Image, Text, View, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { Image, Text, View, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomInput from '../../../components/CustomInput.tsx';
 import CustomButton from '../../../components/CustomButton.tsx';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
+import { showErrorToastWithSupport } from '../../../utils/HelperFunctions.ts';
 import { hp, wp } from '../../../contants/StyleGuide.tsx';
 
 // Email validation regex
@@ -44,6 +46,7 @@ const Signup: React.FC = () => {
     const [passwordError, setPasswordError] = useState<string>('');
     const [confirmPasswordError, setConfirmPasswordError] = useState<string>('');
     const [error, setError] = useState<string>('');
+    const [pendingCredential, setPendingCredential] = useState<any>(null);
 
     // Helper to fetch user role from Firestore
     const fetchUserRole = async (uid: string): Promise<string | null> => {
@@ -60,6 +63,31 @@ const Signup: React.FC = () => {
         } catch (err) {
             console.error('Error fetching user role:', err);
             return null;
+        }
+    };
+
+    // Helper to check for and link account if a pending credential exists
+    const checkAndLinkAccount = async (user: any) => {
+        if (pendingCredential) {
+            try {
+                setLoading(true);
+                await linkProviderToExistingAccount(pendingCredential);
+                setPendingCredential(null);
+                Toast.show({
+                    type: 'success',
+                    text1: 'Success!',
+                    text2: 'Account linked successfully.',
+                    position: 'top',
+                    visibilityTime: 4000,
+                });
+            } catch (linkError: any) {
+                console.error('Error linking from UI:', linkError);
+                if (linkError.code !== 'auth/credential-already-in-use') {
+                    showErrorToastWithSupport('Failed to link account automatically.');
+                }
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
@@ -185,44 +213,33 @@ const Signup: React.FC = () => {
                 await AsyncStorage.setItem('token', res.token);
                 await AsyncStorage.setItem('uid', res.user.uid);
 
-                // Remove anonymous flag if user was converted
-                if (res.converted) {
-                    await AsyncStorage.removeItem('isAnonymous');
-                    console.log('Anonymous user successfully converted to Google account');
-                    // setConversionProvider('Google');
-                    // setShowConversionBanner(true);
-                    // Hide banner after 3 seconds
-                    // setTimeout(() => setShowConversionBanner(false), 3000);
-                }
+                // Always remove anonymous flag on successful login
+                await AsyncStorage.removeItem('isAnonymous');
+
+                // Handle account linking if there's a pending credential
+                await checkAndLinkAccount(res.user);
 
                 // Fetch user role from Firestore
                 const role = await fetchUserRole(res.user.uid);
 
-                // If isGuest is true, redirect to terms and conditions page with shareId
                 if (shareId) {
                     safeNavigate('termsAndPolicy', { shareId });
                     return;
+                } else if (role === 'guest') {
+                    safeNavigate('JoinedEvent');
+                    return;
                 } else {
-                    // Check if user already exists and has a role
-                    if (role === 'guest') {
-                        // If role is guest, navigate to joinedEvent screen
-                        safeNavigate('JoinedEvent');
-                        return;
-                    } else if (role === 'client') {
-                        // If role is client, navigate to dashboard
-                        safeNavigate('dashboard');
-                        return;
-                    } else {
-                        // New user, navigate to dashboard
-                        safeNavigate('dashboard');
-                        return;
-                    }
+                    safeNavigate('dashboard');
+                    return;
                 }
             } else {
                 setError('Google login failed: No user returned.');
+                showErrorToastWithSupport('Google login failed: No user returned.');
             }
-        } catch (googleError) {
-            setError('Google login failed: ' + (googleError as Error).message);
+        } catch (googleError: any) {
+            const msg = 'Google login failed: ' + (googleError instanceof Error ? googleError.message : String(googleError));
+            setError(msg);
+            showErrorToastWithSupport(msg);
         } finally {
             setLoading(false);
         }
@@ -243,44 +260,73 @@ const Signup: React.FC = () => {
                 await AsyncStorage.setItem('token', res.token);
                 await AsyncStorage.setItem('uid', res.user.uid);
 
-                // Remove anonymous flag if user was converted
-                if (res.converted) {
-                    await AsyncStorage.removeItem('isAnonymous');
-                    console.log('Anonymous user successfully converted to Facebook account');
-                    // setConversionProvider('Facebook');
-                    // setShowConversionBanner(true);
-                    // // Hide banner after 3 seconds
-                    // setTimeout(() => setShowConversionBanner(false), 3000);
-                }
+                // Always remove anonymous flag on successful login
+                await AsyncStorage.removeItem('isAnonymous');
+
+                // Handle account linking if there's a pending credential
+                await checkAndLinkAccount(res.user);
 
                 // Fetch user role from Firestore
                 const role = await fetchUserRole(res.user.uid);
 
-                // If isGuest is true, redirect to terms and conditions page with shareId
                 if (shareId) {
                     safeNavigate('termsAndPolicy', { shareId });
                     return;
+                } else if (role === 'guest') {
+                    safeNavigate('JoinedEvent');
+                    return;
                 } else {
-                    // Check if user already exists and has a role
-                    if (role === 'guest') {
-                        // If role is guest, navigate to joinedEvent screen
-                        safeNavigate('JoinedEvent');
-                        return;
-                    } else if (role === 'client') {
-                        // If role is client, navigate to dashboard
-                        safeNavigate('dashboard');
-                        return;
-                    } else {
-                        // New user, navigate to dashboard
-                        safeNavigate('dashboard');
-                        return;
-                    }
+                    safeNavigate('dashboard');
+                    return;
                 }
             } else {
                 setError('Facebook login failed: No user returned.');
+                showErrorToastWithSupport('Facebook login failed: No user returned.');
             }
-        } catch (facebookError: unknown) {
-            setError('Facebook login failed: ' + (facebookError instanceof Error ? facebookError.message : String(facebookError)));
+        } catch (facebookError: any) {
+            const errCode = facebookError.code || '';
+            const errMessage = facebookError.message || '';
+
+            if (errCode.includes('account-exists-with-different-credential') ||
+                errMessage.includes('account-exists-with-different-credential')) {
+
+                const conflictEmail = facebookError.email || facebookError.customData?.email || (facebookError.userInfo && facebookError.userInfo.email);
+                const credential = facebookError.credential || facebookError.customData?.credential;
+
+                if (conflictEmail) {
+                    try {
+                        const providers = await auth.fetchSignInMethodsForEmail(conflictEmail);
+                        let providerName = 'another method';
+                        if (providers.includes('google.com')) providerName = 'Google';
+                        else if (providers.includes('password')) providerName = 'Email/Password';
+                        else if (providers.includes('apple.com')) providerName = 'Apple';
+
+                        if (credential) setPendingCredential(credential);
+
+                        Alert.alert(
+                            'Account Already Exists',
+                            `An account with ${conflictEmail} already exists using ${providerName}. Please sign in with ${providerName} to link your Facebook account.`,
+                            [{ text: 'OK' }]
+                        );
+                        setLoading(false);
+                        return;
+                    } catch (fetchError) {
+                        console.error('Error fetching sign in methods:', fetchError);
+                    }
+                } else if (credential) {
+                    setPendingCredential(credential);
+                    Alert.alert(
+                        'Account Already Exists',
+                        'An account already exists with this email. Please sign in with your original method (Google or Email) to link your Facebook account.',
+                        [{ text: 'OK' }]
+                    );
+                    setLoading(false);
+                    return;
+                }
+            }
+            const msg = 'Facebook login failed: ' + (facebookError instanceof Error ? facebookError.message : String(facebookError));
+            setError(msg);
+            showErrorToastWithSupport(msg);
         } finally {
             setLoading(false);
         }
@@ -301,44 +347,73 @@ const Signup: React.FC = () => {
                 await AsyncStorage.setItem('token', res.token);
                 await AsyncStorage.setItem('uid', res.user.uid);
 
-                // Remove anonymous flag if user was converted
-                if (res.converted) {
-                    await AsyncStorage.removeItem('isAnonymous');
-                    console.log('Anonymous user successfully converted to Apple account');
-                    // setConversionProvider('Apple');
-                    // setShowConversionBanner(true);
-                    // // Hide banner after 3 seconds
-                    // setTimeout(() => setShowConversionBanner(false), 3000);
-                }
+                // Always remove anonymous flag on successful login
+                await AsyncStorage.removeItem('isAnonymous');
+
+                // Handle account linking if there's a pending credential
+                await checkAndLinkAccount(res.user);
 
                 // Fetch user role from Firestore
                 const role = await fetchUserRole(res.user.uid);
 
-                // If isGuest is true, redirect to terms and conditions page with shareId
                 if (shareId) {
                     safeNavigate('termsAndPolicy', { shareId });
                     return;
+                } else if (role === 'guest') {
+                    safeNavigate('JoinedEvent');
+                    return;
                 } else {
-                    // Check if user already exists and has a role
-                    if (role === 'guest') {
-                        // If role is guest, navigate to joinedEvent screen
-                        safeNavigate('JoinedEvent');
-                        return;
-                    } else if (role === 'client') {
-                        // If role is client, navigate to dashboard
-                        safeNavigate('dashboard');
-                        return;
-                    } else {
-                        // New user, navigate to dashboard
-                        safeNavigate('dashboard');
-                        return;
-                    }
+                    safeNavigate('dashboard');
+                    return;
                 }
             } else {
                 setError('Apple login failed: No user returned.');
+                showErrorToastWithSupport('Apple login failed: No user returned.');
             }
-        } catch (appleError: unknown) {
-            setError('Apple login failed: ' + (appleError instanceof Error ? appleError.message : String(appleError)));
+        } catch (appleError: any) {
+            const errCode = appleError.code || '';
+            const errMessage = appleError.message || '';
+
+            if (errCode.includes('account-exists-with-different-credential') ||
+                errMessage.includes('account-exists-with-different-credential')) {
+
+                const conflictEmail = appleError.email || appleError.customData?.email || (appleError.userInfo && appleError.userInfo.email);
+                const credential = appleError.credential || appleError.customData?.credential;
+
+                if (conflictEmail) {
+                    try {
+                        const providers = await auth.fetchSignInMethodsForEmail(conflictEmail);
+                        let providerName = 'another method';
+                        if (providers.includes('google.com')) providerName = 'Google';
+                        else if (providers.includes('password')) providerName = 'Email/Password';
+                        else if (providers.includes('facebook.com')) providerName = 'Facebook';
+
+                        if (credential) setPendingCredential(credential);
+
+                        Alert.alert(
+                            'Account Already Exists',
+                            `An account with ${conflictEmail} already exists using ${providerName}. Please sign in with ${providerName} to link your Apple account.`,
+                            [{ text: 'OK' }]
+                        );
+                        setLoading(false);
+                        return;
+                    } catch (fetchError) {
+                        console.error('Error fetching sign in methods:', fetchError);
+                    }
+                } else if (credential) {
+                    setPendingCredential(credential);
+                    Alert.alert(
+                        'Account Already Exists',
+                        'An account already exists with this email. Please sign in with your original method (Google or Email) to link your Apple account.',
+                        [{ text: 'OK' }]
+                    );
+                    setLoading(false);
+                    return;
+                }
+            }
+            const msg = 'Apple login failed: ' + (appleError instanceof Error ? appleError.message : String(appleError));
+            setError(msg);
+            showErrorToastWithSupport(msg);
         } finally {
             setLoading(false);
         }

@@ -369,6 +369,9 @@ export const loginWithGoogle = async (isGuest: boolean) => {
 };
 
 export const loginWithFacebook = async (isGuest = false) => {
+    let facebookCredential: any = null;
+    let facebookUserEmail: string | null = null; // Store email before signIn attempt
+
     try {
         const currentUser = auth.currentUser;
         if (currentUser && currentUser.isAnonymous) {
@@ -381,7 +384,6 @@ export const loginWithFacebook = async (isGuest = false) => {
 
         console.log('Starting Facebook login...');
         
-        let facebookCredential;
         let signInResult;
 
         if (Platform.OS === 'ios') {
@@ -400,7 +402,7 @@ export const loginWithFacebook = async (isGuest = false) => {
             }
 
             const data = await AuthenticationToken.getAuthenticationTokenIOS();
-            console.log('Facebook AuthenticationToken ios=>>>>>>:', data);
+            console.log('Facebook AuthenticationToken ios======:', data);
 
             if (!data) {
                 throw new Error('Something went wrong obtaining authentication token');
@@ -428,10 +430,18 @@ export const loginWithFacebook = async (isGuest = false) => {
                 throw new Error('Failed to obtain access token from Facebook');
             }
 
-            // Optional: Validate the token (for debugging)
-            const tokenCheck = await fetch(`https://graph.facebook.com/me?access_token=${data.accessToken}`);
-            const tokenJson = await tokenCheck.json();
-            console.log('Graph API token validation:', tokenJson);
+            // Fetch user profile including email from Graph API BEFORE Firebase signIn
+            // This ensures we have the email even if Firebase doesn't include it in the error
+            try {
+                const profileRes = await fetch(
+                    `https://graph.facebook.com/me?fields=email,name&access_token=${data.accessToken}`
+                );
+                const profileJson = await profileRes.json();
+                facebookUserEmail = profileJson.email || null;
+                console.log('Facebook profile from Graph API:', profileJson);
+            } catch (graphErr) {
+                console.warn('Could not fetch Facebook profile email:', graphErr);
+            }
 
             // Create Firebase credential
             facebookCredential = FacebookAuthProvider.credential(data.accessToken);
@@ -463,8 +473,21 @@ export const loginWithFacebook = async (isGuest = false) => {
         const token = await signInResult.user.getIdToken();
         return { user: signInResult.user, token, converted: false };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Facebook login error:', error);
+
+        // For account-exists errors, enrich the error with the credential and email
+        // @react-native-firebase does NOT automatically attach these like the web SDK does
+        if (error.code && error.code.includes('account-exists-with-different-credential')) {
+            if (!error.credential && facebookCredential) {
+                error.credential = facebookCredential;
+            }
+            // Prioritize: error.email > Graph API email > userInfo
+            if (!error.email) {
+                error.email = facebookUserEmail || error.userInfo?.email || error.customData?.email;
+            }
+            console.log('Account conflict — attached email:', error.email, '| has credential:', !!error.credential);
+        }
         throw error;
     }
 };
@@ -537,4 +560,19 @@ export const loginAnonymously = async () => {
     }, { merge: true });
     const token = await result.user.getIdToken();
     return { user: result.user, token };
+};
+
+// Link a credential to the currently signed-in user
+export const linkProviderToExistingAccount = async (credential: any) => {
+    const user = auth.currentUser;
+    if (!user) {
+        throw new Error('No user currently signed in to link the account to.');
+    }
+    try {
+        const result = await linkWithCredential(user, credential);
+        return result;
+    } catch (error) {
+        console.error('Error linking account:', error);
+        throw error;
+    }
 };
