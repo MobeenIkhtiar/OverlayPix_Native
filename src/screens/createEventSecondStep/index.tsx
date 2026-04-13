@@ -124,6 +124,13 @@ const CreateEventSecondStep: React.FC = () => {
         }
     }, [editParam]);
 
+    // Initialize showPhotoPerguest if a plan already has photosPerGuest > 0
+    useEffect(() => {
+        if (step2Data.plan.photosPerGuest > 0 && !showPhotoPerguest) {
+            setShowPhotoPerguest(true);
+        }
+    }, [step2Data.plan.photosPerGuest]);
+
     // FIXED: Calculate prices with proper precision
     const calculatePrices = React.useCallback(() => {
         if (!selectedPlan) return;
@@ -503,19 +510,33 @@ const CreateEventSecondStep: React.FC = () => {
                                     <Text style={styles.toggleLabel}>Allow Guest to view Live Gallery?</Text>
                                     <ToggleSwitch
                                         checked={step2Data.plan.permissions.canViewGallery}
-                                        isEditMode={isEditMode}
-                                        onChange={(checked) => updatePlanData({
-                                            permissions: {
-                                                ...step2Data.plan.permissions,
-                                                canViewGallery: checked
+                                        isEditMode={false}
+                                        onChange={(checked) => {
+                                            if (!checked) {
+                                                updatePlanData({
+                                                    permissions: {
+                                                        ...step2Data.plan.permissions,
+                                                        canViewGallery: false,
+                                                        canSharePhotos: false,
+                                                        canDownload: false
+                                                    }
+                                                });
+                                            } else {
+                                                updatePlanData({
+                                                    permissions: {
+                                                        ...step2Data.plan.permissions,
+                                                        canViewGallery: true
+                                                    }
+                                                });
                                             }
-                                        })}
+                                        }}
                                     />
                                 </View>
                                 <View style={styles.toggleRow}>
                                     <Text style={styles.toggleLabel}>Allow Guest to Share Live Gallery pictures?</Text>
                                     <ToggleSwitch
                                         checked={step2Data.plan.permissions.canSharePhotos}
+                                        disabled={!step2Data.plan.permissions.canViewGallery}
                                         isEditMode={false}
                                         onChange={(checked) => updatePlanData({
                                             permissions: {
@@ -529,6 +550,7 @@ const CreateEventSecondStep: React.FC = () => {
                                     <Text style={styles.toggleLabel}>Allow Guest to Download Live Gallery pictures?</Text>
                                     <ToggleSwitch
                                         checked={step2Data.plan.permissions.canDownload}
+                                        disabled={!step2Data.plan.permissions.canViewGallery}
                                         isEditMode={false}
                                         onChange={(checked) => updatePlanData({
                                             permissions: {
@@ -692,17 +714,10 @@ const CreateEventSecondStep: React.FC = () => {
                         <ToggleSwitch
                             checked={showPhotoPerguest}
                             onChange={(checked) => {
-                                if (checked) {
-                                    setShowPhotoPerguest(true)
-                                    updatePlanData({
-                                        photosPerGuest: 1
-                                    });
-                                } else {
-                                    setShowPhotoPerguest(!showPhotoPerguest)
-                                    updatePlanData({
-                                        photosPerGuest: 0
-                                    });
-                                }
+                                setShowPhotoPerguest(checked);
+                                updatePlanData({
+                                    photosPerGuest: checked ? 1 : 0
+                                });
                             }}
                         />
                     </View>

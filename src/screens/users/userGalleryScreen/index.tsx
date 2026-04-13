@@ -30,6 +30,7 @@ const UserGalleryScreen: React.FC = () => {
     const [liveGalleryImages, setLiveGalleryImages] = useState<any>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+    const [isLiveGalleryEnabled, setIsLiveGalleryEnabled] = useState<boolean>(true);
     const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
     const [searchGuest, setSearchGuest] = useState<string>('');
     const [hasCreds, setHasCreds] = useState<boolean>(false);
@@ -96,6 +97,8 @@ const UserGalleryScreen: React.FC = () => {
             if (activeTab === 'your') {
                 setGalleryImages(response || []);
             } else {
+                const enabled = (response as any)?.isLiveGalleryEnabled ?? true;
+                setIsLiveGalleryEnabled(enabled);
                 setLiveGalleryImages(response || []);
             }
         } catch (err: any) {
@@ -302,7 +305,7 @@ const UserGalleryScreen: React.FC = () => {
                     )}
                 </View>
 
-                {canDownload && filteredImagesToShow?.length > 0 && (
+                {(canDownload || activeTab === 'your') && filteredImagesToShow?.length > 0 && (
                     <TouchableOpacity
                         style={styles.downloadBtn}
                         onPress={handleDownloadAll}
@@ -317,6 +320,12 @@ const UserGalleryScreen: React.FC = () => {
                     {loading ? (
                         <View style={styles.centered}>
                             <ActivityIndicator size="large" color="#3DA9B7" />
+                        </View>
+                    ) : activeTab === 'live' && !isLiveGalleryEnabled ? (
+                        <View style={styles.centered}>
+                            <Text style={styles.errorText}>
+                                {"Live gallery isn't enabled for this event\u2014please view your photos under Your Gallery."}
+                            </Text>
                         </View>
                     ) : error ? (
                         <View style={styles.centered}><Text style={styles.errorText}>{error}</Text></View>
@@ -342,7 +351,8 @@ const UserGalleryScreen: React.FC = () => {
                                             guestId: item.guestId,
                                             selectedPhotoUrl: item.photoUrl,
                                             canSharePhotos: canSharePhotos,
-                                            canDownload: canDownload
+                                            canDownload: canDownload,
+                                            activeTab: activeTab
                                         });
                                     }}
                                     photoUrl={item.photoUrl}
@@ -416,7 +426,7 @@ const GalleryCard: React.FC<{ name: string; image: string; activeTab: 'your' | '
             {activeTab === 'live' ? (
                 <View style={styles.galleryCardLiveBar}>
                     <Text style={styles.galleryCardLiveName} numberOfLines={1}>{name}</Text>
-                    {canSharePhotos && (
+                    {(canSharePhotos || activeTab === 'your') && (
                         <TouchableOpacity onPress={handleShareLink} style={styles.shareBtn}>
                             <Share2 color={'#000'} size={wp(5)} />
                         </TouchableOpacity>
@@ -429,7 +439,7 @@ const GalleryCard: React.FC<{ name: string; image: string; activeTab: 'your' | '
                 </View>
             ) : (
                 <View style={styles.galleryCardBtnBar}>
-                    {canSharePhotos && (
+                    {(canSharePhotos || activeTab === 'your') && (
                         <TouchableOpacity onPress={handleShareLink} style={styles.shareBtn}>
                             <Share2 color={'#000'} size={wp(5)} />
                         </TouchableOpacity>

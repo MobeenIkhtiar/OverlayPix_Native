@@ -65,11 +65,19 @@ const JoinedEventCard: React.FC<EventCardProps> = ({
     const statusStr = typeof status === 'string' ? status.toLowerCase() : String(status).toLowerCase();
     const isExpired = statusStr === 'expired';
 
+    const formatEventType = (type: string) => {
+        if (!type) return '';
+        return type
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    };
+
     return (
         <View style={styles.cardContainer}>
             <View style={styles.headerSection}>
                 <Text style={styles.title} numberOfLines={1}>{title}</Text>
-                <Text style={styles.type}>{type}</Text>
+                <Text style={styles.type}>{formatEventType(type)}</Text>
             </View>
             <View style={styles.contentRow}>
                 <View style={styles.infoSection}>

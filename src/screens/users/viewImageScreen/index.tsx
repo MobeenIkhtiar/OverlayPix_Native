@@ -36,7 +36,7 @@ type AllImagesResponse = {
 const ViewImageScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
-    const { eventID, guestId, shareId, selectedPhotoUrl, canSharePhotos, canDownload } = route.params || {};
+    const { eventID, guestId, shareId, selectedPhotoUrl, canSharePhotos, canDownload, activeTab } = route.params || {};
     const [allImages, setAllImages] = useState<AllImagesResponse>({});
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -265,7 +265,7 @@ const ViewImageScreen: React.FC = () => {
                                 {mainImageGuestName + "'s gallery"}
                             </Text>
                             <View style={styles.actionsRow}>
-                                {canDownload && (
+                                {(canDownload || activeTab === 'your') && (
                                     <TouchableOpacity
                                         style={[styles.shareButton, { marginRight: wp(2) }]}
                                         onPress={() => handleDownload()}
@@ -273,7 +273,7 @@ const ViewImageScreen: React.FC = () => {
                                         <Download color={'#000'} size={wp(5)} />
                                     </TouchableOpacity>
                                 )}
-                                {canSharePhotos && (
+                                {(canSharePhotos || activeTab === 'your') && (
                                     <TouchableOpacity
                                         style={styles.shareButton}
                                         onPress={() => handleShareLink()}
@@ -347,7 +347,7 @@ const ViewImageScreen: React.FC = () => {
                                             <Text style={styles.thumbnailOwner} numberOfLines={1}>
                                                 {img.owner}
                                             </Text>
-                                            {canSharePhotos && <Share2 color={'#fff'} size={wp(3)} />}
+                                            {(canSharePhotos || activeTab === 'your') && <Share2 color={'#fff'} size={wp(3)} />}
                                         </TouchableOpacity>
                                     </TouchableOpacity>
                                 ) : null

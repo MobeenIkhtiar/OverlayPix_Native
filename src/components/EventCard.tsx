@@ -106,11 +106,19 @@ const EventCard: React.FC<EventCardProps> = ({
     // Normalize status to string and check for "expired" (case-insensitive)
     const isExpired = typeof status === 'string' && status.trim().toLowerCase() === 'expired';
 
+    const formatEventType = (type: string) => {
+        if (!type) return '';
+        return type
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    };
+
     return (
         <View style={styles.cardContainer}>
             <View style={{ marginBottom: hp(0.5) }}>
                 <Text style={styles.cardTitle}>{title}</Text>
-                <Text style={styles.cardType}>{type}</Text>
+                <Text style={styles.cardType}>{formatEventType(type)}</Text>
             </View>
             <View style={styles.cardGrid}>
                 <View style={{ flex: 1 }}>

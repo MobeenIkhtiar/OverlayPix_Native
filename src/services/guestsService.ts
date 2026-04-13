@@ -137,7 +137,12 @@ export const guestServices = {
                 (error as { response?: { data?: { error?: string }, statusText?: string } }).response?.data
             ) {
                 const errObj = error as { response?: { data?: { error?: string }, statusText?: string } };
-                errorMsg = `Failed to fetch gallery images: ${errObj.response?.data?.error || errObj.response?.statusText || 'Unknown error'}`;
+                const backendError = errObj.response?.data?.error;
+                if (backendError && backendError.includes('Live gallery isn’t enabled for this event')) {
+                    errorMsg = backendError;
+                } else {
+                    errorMsg = `Failed to fetch gallery images: ${backendError || errObj.response?.statusText || 'Unknown error'}`;
+                }
             } else if (error instanceof Error) {
                 errorMsg = `Failed to fetch gallery images: ${error.message}`;
             }
@@ -177,7 +182,12 @@ export const guestServices = {
                 (error as { response?: { data?: { error?: string }, statusText?: string } }).response?.data
             ) {
                 const errObj = error as { response?: { data?: { error?: string }, statusText?: string } };
-                errorMsg = `Failed to fetch gallery images: ${errObj.response?.data?.error || errObj.response?.statusText || 'Unknown error'}`;
+                const backendError = errObj.response?.data?.error;
+                if (backendError && backendError.includes('Live gallery isn’t enabled for this event')) {
+                    errorMsg = backendError;
+                } else {
+                    errorMsg = `Failed to fetch gallery images: ${backendError || errObj.response?.statusText || 'Unknown error'}`;
+                }
             } else if (error instanceof Error) {
                 errorMsg = `Failed to fetch gallery images: ${error.message}`;
             }

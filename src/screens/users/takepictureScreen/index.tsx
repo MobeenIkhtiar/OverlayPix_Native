@@ -7,7 +7,7 @@ import Loader from '../../../components/Loader';
 import { guestServices } from '../../../services/guestsService';
 import { HEIGHT, hp, wp } from '../../../contants/StyleGuide';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SwitchCamera, Zap, ZapOff } from 'lucide-react-native';
+import { SwitchCamera, Zap, ZapOff, ChevronLeft } from 'lucide-react-native';
 
 import { FILTERS } from './filterMatrices';
 import SkiaFilteredImage from './SkiaFilteredImage';
@@ -300,29 +300,38 @@ const TakePictureScreen = () => {
                     </View>
                 )}
 
-                {/* Flash Button + Switch Camera Button */}
+                {/* Top Controls: Back, Flash, Switch Camera */}
                 {!isPreviewMode && !hideButton && (
-                    <View style={styles.flashButtonContainer}>
+                    <View style={styles.topActionsContainer}>
                         <TouchableOpacity
-                            onPress={handleToggleFlash}
-                            disabled={!flashSupported || cameraPosition === 'front'}
-                            style={[styles.flashButton, (!flashSupported || cameraPosition === 'front') && styles.disabledFlashButton]}
+                            onPress={() => navigation.goBack()}
+                            style={styles.backButton}
                         >
-                            {flashOn ? (
-                                <Zap size={wp(5.5)} color="#00ff88" fill="#00ff88" />
-                            ) : (
-                                <ZapOff size={wp(5.5)} color="#fff" />
+                            <ChevronLeft size={wp(6)} color="#fff" />
+                        </TouchableOpacity>
+
+                        <View style={styles.rightControlsContainer}>
+                            {flashError && (
+                                <Text style={styles.flashError}>{flashError}</Text>
                             )}
-                        </TouchableOpacity>
-                        {flashError && (
-                            <Text style={styles.flashError}>{flashError}</Text>
-                        )}
-                        <TouchableOpacity
-                            onPress={handleSwitchCamera}
-                            style={styles.switchCameraButton}
-                        >
-                            <SwitchCamera size={wp(5.5)} color="#fff" />
-                        </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleToggleFlash}
+                                disabled={!flashSupported || cameraPosition === 'front'}
+                                style={[styles.flashButton, (!flashSupported || cameraPosition === 'front') && styles.disabledFlashButton]}
+                            >
+                                {flashOn ? (
+                                    <Zap size={wp(5.5)} color="#00ff88" fill="#00ff88" />
+                                ) : (
+                                    <ZapOff size={wp(5.5)} color="#fff" />
+                                )}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleSwitchCamera}
+                                style={styles.switchCameraButton}
+                            >
+                                <SwitchCamera size={wp(5.5)} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 )}
 
@@ -552,14 +561,30 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    flashButtonContainer: {
+    topActionsContainer: {
         position: 'absolute',
         top: hp(3),
         left: wp(4),
+        right: wp(4),
         zIndex: 200,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    rightControlsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: wp(2),
+    },
+    backButton: {
+        padding: wp(1.8),
+        paddingRight: wp(2.2), // slightly adjust padding to center chevron visually
+        borderRadius: wp(7),
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     flashButton: {
         padding: wp(2.2),
@@ -602,7 +627,7 @@ const styles = StyleSheet.create({
     },
     overlayImage: {
         width: '100%',
-        height: HEIGHT,
+        height: '100%',
         opacity: 0.98,
     },
     frameMask: {

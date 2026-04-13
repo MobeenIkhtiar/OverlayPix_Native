@@ -297,7 +297,7 @@ const DashboardScreen: React.FC = () => {
                                                     : event.eventDate)
                                         }
                                         photos={event.photosUploaded}
-                                        guests={event.guestName}
+                                        guests={event.guestsCount}
                                         // Only allow view images for joined events
                                         onViewImages={() => {
                                             navigation.navigate(`userGallery`, { eventId: event?.eventId, fromDashboard: true })

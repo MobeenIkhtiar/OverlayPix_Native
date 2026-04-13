@@ -26,7 +26,8 @@ interface JoinedEvent {
     eventStatus?: string;
     eventDate?: { _seconds: number; _nanoseconds: number } | string;
     photosUploaded?: number;
-    guestName?: number;
+    guestsCount?: number;
+    guestName?: string;
     storageExpired?: boolean;
     overlayUrl?: string;
     [key: string]: unknown;
@@ -118,7 +119,7 @@ const JoinedEvents: React.FC = () => {
                         : (item.eventDate as any)
             }
             photos={typeof item.photosUploaded === 'number' ? item.photosUploaded : undefined}
-            guests={typeof item.guestName === 'number' ? item.guestName : undefined}
+            guests={typeof item.guestsCount === 'number' ? item.guestsCount : undefined}
             onViewImages={() => {
                 navigation.navigate('userGallery', {
                     eventId: item?.eventId,
