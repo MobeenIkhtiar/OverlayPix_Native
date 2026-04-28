@@ -100,11 +100,18 @@ export const guestServices = {
             // Show error toast with support
             if (typeof showErrorToastWithSupport === 'function') {
                 showErrorToastWithSupport(errorMsg);
+                if (errorMsg?.toLowerCase().includes('photo limit')) {
+                    if (navigate && typeof navigate.goBack === 'function') {
+                        navigate.goBack();
+                    }
+                }
                 if (typeof navigate === 'function') {
                     navigate(-1);
                 }
             }
+            console.log('errorMsg =>>>>>>>>', errorMsg);
             throw new Error(errorMsg);
+
         }
     },
 

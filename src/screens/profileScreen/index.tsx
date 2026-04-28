@@ -297,12 +297,14 @@ const ProfileScreen: React.FC = () => {
 
                 {/* Profile Card */}
                 <View style={styles.profileCard}>
-                    <View style={styles.avatarContainer}>
-                        <Image
-                            source={previewImage ? { uri: previewImage } : icons.user}
-                            style={styles.avatar}
-                            resizeMode="cover"
-                        />
+                    <View>
+                        <View style={styles.avatarContainer}>
+                            <Image
+                                source={previewImage ? { uri: previewImage } : icons.user}
+                                style={styles.avatar}
+                                resizeMode="cover"
+                            />
+                        </View>
                         {/* Camera icon overlay (for edit avatar) */}
                         <TouchableOpacity
                             style={styles.cameraOverlay}
@@ -506,8 +508,8 @@ const styles = StyleSheet.create({
     },
     cameraOverlay: {
         position: 'absolute',
-        bottom: 4,
-        left: 44,
+        bottom: 0,
+        right: -4,
         zIndex: 20,
         backgroundColor: '#fff',
         borderRadius: 999,

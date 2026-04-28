@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, FlatList, TextInput, ActivityIndicator, StyleSheet, ScrollView, Share, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, TextInput, ActivityIndicator, StyleSheet, ScrollView, Alert } from 'react-native';
 import FastImage from 'react-native-fast-image';
-import Clipboard from '@react-native-clipboard/clipboard';
 import Header from '../../../components/Header';
 import PhotoLimitModal from '../../../components/PhotoLimitModal';
 import { guestServices } from '../../../services/guestsService';
-import { downloadImages, proxyOverlayImage, showErrorToastWithSupport } from '../../../utils/HelperFunctions';
+import { downloadImages, proxyOverlayImage, shareImageFile, showErrorToastWithSupport } from '../../../utils/HelperFunctions';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { hp, wp } from '../../../contants/StyleGuide';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -35,6 +34,7 @@ const UserGalleryScreen: React.FC = () => {
     const [searchGuest, setSearchGuest] = useState<string>('');
     const [hasCreds, setHasCreds] = useState<boolean>(false);
     const [userRole, setUserRole] = useState<string | null>(null);
+    const [isEventOwner, setIsEventOwner] = useState<boolean>(false);
 
     useEffect(() => {
         // Modified to use AsyncStorage instead of localStorage for native, keep localStorage for web
@@ -64,14 +64,7 @@ const UserGalleryScreen: React.FC = () => {
         checkAuthAndRole();
     }, []);
 
-    // Re-fetch whenever the screen comes into focus (e.g., after navigating back from ViewImageScreen)
-    useFocusEffect(
-        useCallback(() => {
-            fetchImages();
-        }, [activeTab, eventID])
-    );
-
-    const fetchImages = async () => {
+    const fetchImages = useCallback(async () => {
         if (
             eventID === undefined ||
             eventID === null ||
@@ -90,7 +83,7 @@ const UserGalleryScreen: React.FC = () => {
         try {
             const response: any = await guestServices.getGuestsImages(eventID, endpoint);
 
-            console.log('response gallery =>>>>>>>>>>', response);
+            console.log('response gallery =>>>>>>>>>>>>', response);
             console.log('canSharePhotos from API:', response?.canSharePhotos);
             console.log('canDownload from API:', response?.canDownload);
 
@@ -99,6 +92,12 @@ const UserGalleryScreen: React.FC = () => {
             } else {
                 const enabled = (response as any)?.isLiveGalleryEnabled ?? true;
                 setIsLiveGalleryEnabled(enabled);
+
+                // Check if current user is the event owner
+                const uid = await AsyncStorage.getItem('uid');
+                const eventOwnerId = (response as any)?.eventOwnerId || (response as any)?.ownerId;
+                setIsEventOwner(uid === eventOwnerId);
+
                 setLiveGalleryImages(response || []);
             }
         } catch (err: any) {
@@ -109,11 +108,19 @@ const UserGalleryScreen: React.FC = () => {
             );
             setGalleryImages([]);
             setLiveGalleryImages([]);
-            setEventID(eventID)
+            setEventID(eventID);
         } finally {
             setLoading(false);
         }
-    };
+    }, [activeTab, eventID]);
+
+    // Re-fetch whenever the screen comes into focus (e.g., navigating back from takePicture / viewImage)
+    useFocusEffect(
+        useCallback(() => {
+            fetchImages();
+        }, [fetchImages])
+    );
+
 
     const handleTakePicture = () => {
         const allowedPhotos = galleryImages?.allowedPhotosPerGuest ?? null;
@@ -180,8 +187,9 @@ const UserGalleryScreen: React.FC = () => {
 
     const imagesToShow = activeTab === 'your' ? galleryImages?.photos : liveGalleryImages?.photos;
     const currentResponse = activeTab === 'your' ? galleryImages : liveGalleryImages;
-    const canSharePhotos = currentResponse?.canSharePhotos === true;
-    const canDownload = currentResponse?.canDownload === true;
+    // Event owners can always share and download, regardless of permissions
+    const canSharePhotos = currentResponse?.canSharePhotos === true || (activeTab === 'live' && isEventOwner);
+    const canDownload = currentResponse?.canDownload === true || (activeTab === 'live' && isEventOwner);
 
     const guestList: string[] = Array.from(
         new Set(
@@ -321,7 +329,7 @@ const UserGalleryScreen: React.FC = () => {
                         <View style={styles.centered}>
                             <ActivityIndicator size="large" color="#3DA9B7" />
                         </View>
-                    ) : activeTab === 'live' && !isLiveGalleryEnabled ? (
+                    ) : activeTab === 'live' && !isLiveGalleryEnabled && !isEventOwner ? (
                         <View style={styles.centered}>
                             <Text style={styles.errorText}>
                                 {"Live gallery isn't enabled for this event\u2014please view your photos under Your Gallery."}
@@ -380,33 +388,12 @@ const UserGalleryScreen: React.FC = () => {
     );
 };
 
-const GalleryCard: React.FC<{ name: string; image: string; activeTab: 'your' | 'live', onClick: () => void, photoUrl: string, canSharePhotos: boolean }> = ({ name, image, activeTab, onClick, photoUrl, canSharePhotos }) => {
-    const [copied, setCopied] = useState(false);
-
+const GalleryCard: React.FC<{ name: string; image: string; activeTab: any, onClick: () => void, photoUrl: string, canSharePhotos: boolean }> = ({ name, image, activeTab, onClick, photoUrl, canSharePhotos }) => {
     const handleShareLink = async () => {
         if (!photoUrl) return;
 
-        try {
-            const result = await Share.share({
-                message: name
-                    ? `Check out this photo from ${name}: ${photoUrl}`
-                    : photoUrl,
-                url: photoUrl,
-            });
-
-            if (result.action === Share.sharedAction) {
-                showErrorToastWithSupport('Shared successfully!');
-            }
-        } catch (error) {
-            // If share fails, copy to clipboard as fallback
-            try {
-                Clipboard.setString(photoUrl);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-            } catch (e) {
-                // nothing
-            }
-        }
+        const caption = name ? `Check out this photo from ${name}!` : 'Check out this photo!';
+        await shareImageFile(photoUrl, caption);
     };
 
     return (
@@ -431,11 +418,6 @@ const GalleryCard: React.FC<{ name: string; image: string; activeTab: 'your' | '
                             <Share2 color={'#000'} size={wp(5)} />
                         </TouchableOpacity>
                     )}
-                    {copied && (
-                        <View style={styles.copiedToast}>
-                            <Text style={styles.copiedToastText}>Link copied!</Text>
-                        </View>
-                    )}
                 </View>
             ) : (
                 <View style={styles.galleryCardBtnBar}>
@@ -443,11 +425,6 @@ const GalleryCard: React.FC<{ name: string; image: string; activeTab: 'your' | '
                         <TouchableOpacity onPress={handleShareLink} style={styles.shareBtn}>
                             <Share2 color={'#000'} size={wp(5)} />
                         </TouchableOpacity>
-                    )}
-                    {copied && (
-                        <View style={styles.copiedToast}>
-                            <Text style={styles.copiedToastText}>Link copied!</Text>
-                        </View>
                     )}
                 </View>
             )}

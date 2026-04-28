@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, KeyboardAv
 // import ConversionBanner from '../../../components/ConversionBanner';
 import { Mail, LockKeyhole, ChevronLeft } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { loginWithEmail, loginWithGoogle, loginWithApple, loginWithFacebook, db, linkProviderToExistingAccount, auth } from '../../../services/loginService.ts';
+import { loginWithEmail, loginWithGoogle, loginWithApple, loginWithFacebook, db, linkProviderToExistingAccount, auth, clearExternalAuthSessions } from '../../../services/loginService.ts';
 import { doc, getDoc } from '@react-native-firebase/firestore';
 import { showErrorToastWithSupport } from '../../../utils/HelperFunctions.ts';
 import CustomInput from '../../../components/CustomInput.tsx';
@@ -169,6 +169,7 @@ const Login: React.FC = () => {
         e.preventDefault && e.preventDefault();
         setError('');
         setLoading(true);
+        await clearExternalAuthSessions();
         try {
             const { user, token } = await loginWithEmail(email, password);
             const role = await fetchUserRole(user.uid);
@@ -236,6 +237,7 @@ const Login: React.FC = () => {
     const handleGoogleLogin = async () => {
         setError('');
         setLoading(true);
+        await clearExternalAuthSessions();
         try {
             const res = await loginWithGoogle(isGuest);
             await setItem('guest_login', isGuest.toString());
@@ -296,6 +298,7 @@ const Login: React.FC = () => {
     const handleFacebookLogin = async () => {
         setError('');
         setLoading(true);
+        await clearExternalAuthSessions();
         try {
             console.log('Facebook Login=>>>>>>>>>>.',);
             const res = await loginWithFacebook(isGuest);
@@ -404,6 +407,7 @@ const Login: React.FC = () => {
     const handleAppleLogin = async () => {
         setError('');
         setLoading(true);
+        await clearExternalAuthSessions();
         try {
             const res = await loginWithApple(isGuest);
             await setItem('guest_login', isGuest.toString());

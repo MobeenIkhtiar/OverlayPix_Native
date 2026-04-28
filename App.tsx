@@ -1,5 +1,5 @@
 import { StatusBar, StyleSheet } from 'react-native'
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import AppNavigator from './src/navigation/AppNavigator'
 import Toast from 'react-native-toast-message'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -9,8 +9,11 @@ import { CreateEventProvider } from './src/contexts/CreateEventContext'
 import { revenueCatService } from './src/services/revenueCatService'
 import { onAuthStateChanged } from '@react-native-firebase/auth'
 import { auth } from './src/services/loginService'
+import SplashScreen from './src/screens/SplashScreen'
 
 const App = () => {
+  const [showSplash, setShowSplash] = useState(true);
+
   useEffect(() => {
     // Initialize social authentication providers
     configureGoogleSignIn();
@@ -38,6 +41,10 @@ const App = () => {
 
     return () => subscriber(); // unsubscribe on unmount
   }, []);
+
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  }
 
   return (
     <>

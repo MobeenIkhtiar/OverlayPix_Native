@@ -1,4 +1,5 @@
 import { Linking, Alert, Platform, PermissionsAndroid } from 'react-native';
+import RNShare from 'react-native-share';
 import Toast from 'react-native-toast-message';
 import { BASEURL } from '../services/Endpoints';
 import RNFS from 'react-native-fs';
@@ -234,30 +235,11 @@ export const downloadImages = async (urls: string[], eventName?: string) => {
     let successCount = 0;
     let failCount = 0;
 
-    const baseDir = Platform.select({
-        ios: RNFS.DocumentDirectoryPath,
-        android: RNFS.DownloadDirectoryPath,
-    }) || RNFS.CachesDirectoryPath;
-
-    const overlayPixDir = `${baseDir}/OverlayPix`;
-    const eventDir = `${overlayPixDir}/${sanitizedEventName}`;
-
-    try {
-        // Create directories if they don't exist
-        const exists = await RNFS.exists(eventDir);
-        if (!exists) {
-            await RNFS.mkdir(eventDir);
-        }
-    } catch (err) {
-        console.error('Error creating directory:', err);
-        // Fallback to baseDir if mkdir fails (unlikely, but safe)
-    }
-
-    const downloadDir = eventDir;
+    const downloadDir = RNFS.CachesDirectoryPath || RNFS.DocumentDirectoryPath;
 
     // Use a Promise.all with some concurrency control if needed, but for simplicity we'll do them sequentially or in small batches
-    // Flag to show the iOS permission alert only once across all parallel downloads
-    let iosPermissionAlertShown = false;
+    // Flag to show the permission alert only once across all parallel downloads
+    let permissionAlertShown = false;
 
     // Let's do them in parallel since they are separate files
     const downloadPromises = urls.map(async (url, index) => {
@@ -272,27 +254,30 @@ export const downloadImages = async (urls: string[], eventName?: string) => {
             }).promise;
 
             if (result.statusCode === 200) {
-                if (Platform.OS === 'android') {
-                    // Update Android Media Store immediately
-                    await RNFS.scanFile(destPath);
-                } else if (Platform.OS === 'ios') {
-                    try {
-                        // Save to iOS native Photos App.
-                        // Permission was already verified before we started downloading,
-                        // so this should succeed. If the user somehow revokes mid-download,
-                        // catch it and show the Settings prompt once.
-                        await CameraRoll.save(destPath, { type: 'photo' });
-                    } catch (saveError: any) {
-                        failCount++;
-                        if (!iosPermissionAlertShown) {
-                            iosPermissionAlertShown = true;
-                            Toast.hide();
+                try {
+                    // Save to Native Photos App (Pictures/Camera Roll).
+                    // This ensures the photo appears in the main Google Photos tab on Android.
+                    await CameraRoll.save(destPath, { type: 'photo', album: 'OverlayPix' });
+                    successCount++;
+                } catch (saveError: any) {
+                    failCount++;
+                    if (!permissionAlertShown) {
+                        permissionAlertShown = true;
+                        Toast.hide();
+                        if (Platform.OS === 'ios') {
                             showIOSPermissionDeniedAlert();
+                        } else {
+                            Toast.show({
+                                type: 'error',
+                                text1: 'Save Failed',
+                                text2: 'Could not save to gallery. Please check permissions.',
+                            });
                         }
-                        return; // skip successCount
                     }
+                } finally {
+                    // Clean up temp file
+                    RNFS.unlink(destPath).catch(() => null);
                 }
-                successCount++;
             } else {
                 failCount++;
             }
@@ -330,5 +315,73 @@ export const downloadImages = async (urls: string[], eventName?: string) => {
             text2: `${successCount} saved to Gallery, ${failCount} failed.`,
             visibilityTime: 5000,
         });
+    }
+};
+
+/**
+ * Share an image as an actual file payload so social apps (e.g. Facebook)
+ * display the real image in the post rather than just a plain text link.
+ *
+ * Strategy:
+ *  1. Download the remote image to a temp file via RNFS.
+ *  2. Pass the local `file://` URI to the native Share sheet.
+ *     Social apps receive a real image file instead of a URL string,
+ *     so they upload/embed it properly in the post.
+ *  3. Clean up the temp file after sharing (best-effort).
+ *
+ * @param photoUrl  Remote image URL (e.g. Cloudflare R2 URL).
+ * @param message   Optional caption text shown alongside the image.
+ */
+export const shareImageFile = async (photoUrl: string, message?: string): Promise<void> => {
+    if (!photoUrl) return;
+
+    Toast.show({
+        type: 'info',
+        text1: 'Preparing image to share…',
+        autoHide: false,
+    });
+
+    const tempDir = RNFS.CachesDirectoryPath;
+    const fileName = `share_${Date.now()}.jpg`;
+    const tempPath = `${tempDir}/${fileName}`;
+
+    try {
+        // Download remote image to a local temp file
+        const result = await RNFS.downloadFile({
+            fromUrl: photoUrl,
+            toFile: tempPath,
+        }).promise;
+
+        Toast.hide();
+
+        if (result.statusCode !== 200) {
+            throw new Error(`Download failed with status ${result.statusCode}`);
+        }
+
+        // Build the file:// URI — Android needs the explicit scheme
+        const fileUri = Platform.OS === 'android'
+            ? `file://${tempPath}`
+            : tempPath;
+
+        await RNShare.open({
+            url: fileUri,
+            message: message || '',
+            title: message || 'Check out this photo!',
+        });
+    } catch (error: any) {
+        Toast.hide();
+        console.error('shareImageFile error:', error);
+        // Fallback: share the raw URL — still useful for copy-paste
+        try {
+            await RNShare.open({
+                message: message ? `${message}: ${photoUrl}` : photoUrl,
+                url: photoUrl,
+            });
+        } catch (fallbackError) {
+            showErrorToastWithSupport('Failed to share image. Please try again.');
+        }
+    } finally {
+        // Clean up temp file (best-effort, do not throw)
+        RNFS.unlink(tempPath).catch(() => null);
     }
 };

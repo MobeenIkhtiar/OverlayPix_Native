@@ -4,7 +4,7 @@ import { Mail, LockKeyhole, ChevronLeft } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 // import { apiService } from '../../../services/api';
 // import { endPoints } from '../../../services/Endpoints';
-import { db, loginWithApple, loginWithGoogle, loginWithFacebook, registerWithEmail, linkProviderToExistingAccount, auth } from '../../../services/loginService.ts';
+import { db, loginWithApple, loginWithGoogle, loginWithFacebook, registerWithEmail, linkProviderToExistingAccount, auth, clearExternalAuthSessions } from '../../../services/loginService.ts';
 import { doc, getDoc } from '@react-native-firebase/firestore';
 import { icons } from '../../../contants/Icons.ts';
 import { Image, Text, View, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
@@ -150,6 +150,7 @@ const Signup: React.FC = () => {
             return;
         }
         setLoading(true);
+        await clearExternalAuthSessions();
         try {
             const res = await registerWithEmail(email, password, isGuest, fullName);
             // console.log('Firebase Signup response:', res.user);
@@ -201,6 +202,7 @@ const Signup: React.FC = () => {
     const handleGoogleLogin = async () => {
         setError('');
         setLoading(true);
+        await clearExternalAuthSessions();
         try {
             const res = await loginWithGoogle(isGuest);
             await AsyncStorage.setItem('guest_login', isGuest.toString());
@@ -248,6 +250,7 @@ const Signup: React.FC = () => {
     const handleFacebookLogin = async () => {
         setError('');
         setLoading(true);
+        await clearExternalAuthSessions();
         try {
             const res = await loginWithFacebook(isGuest);
             await AsyncStorage.setItem('guest_login', isGuest.toString());
@@ -335,6 +338,7 @@ const Signup: React.FC = () => {
     const handleAppleLogin = async () => {
         setError('');
         setLoading(true);
+        await clearExternalAuthSessions();
         try {
             const res = await loginWithApple(isGuest);
             await AsyncStorage.setItem('guest_login', isGuest.toString());
