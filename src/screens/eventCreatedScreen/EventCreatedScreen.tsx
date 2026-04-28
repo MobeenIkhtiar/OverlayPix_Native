@@ -148,12 +148,13 @@ const EventCreatedScreen: React.FC = () => {
                     <View style={styles.hexagonContainer}>
                         <Image
                             source={icons.hexagon_check}
-                            style={{ width: wp(24), height: wp(24), marginBottom: hp(2) }}
+                            style={{ width: wp(10), height: wp(10), }}
                             resizeMode="contain"
                         />
-                    </View>
 
-                    <Text style={styles.headline}>Your Event Has Been Created!</Text>
+
+                        <Text style={styles.headline}>Your Event Has Been Created!</Text>
+                    </View>
                     <Text style={styles.subtext}>
                         You're all set. Your event will be live at the below date/time and ready to welcome guests.
                     </Text>
@@ -199,19 +200,23 @@ const styles = StyleSheet.create({
     container: {
         width: '100%',
         flex: 1,
-        flexDirection: 'column',
         padding: wp(3),
         backgroundColor: '#F6FEFF',
     },
     centeredContent: {
         flex: 1,
         alignItems: 'center',
+        // backgroundColor: 'red'
     },
     hexagonContainer: {
-        marginBottom: hp(2),
+        // marginBottom: hp(2),
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: wp(10)
     },
     headline: {
-        fontSize: wp(5),
+        fontSize: wp(4),
         fontWeight: 'bold',
         color: '#3DA9B7',
         textAlign: 'center',
@@ -220,7 +225,7 @@ const styles = StyleSheet.create({
     subtext: {
         color: '#626666',
         paddingHorizontal: wp(4),
-        fontSize: wp(3.5),
+        fontSize: wp(3),
         textAlign: 'center',
         fontWeight: '400',
         maxWidth: wp(80),

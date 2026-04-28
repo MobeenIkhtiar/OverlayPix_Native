@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Animated, Platform, Alert, ScrollView, ActivityIndicator } from 'react-native';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Animated, Platform, Alert, ScrollView, ActivityIndicator, AppState } from 'react-native';
+import { useNavigation, useRoute, useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { Camera, useCameraDevice, CameraPermissionStatus } from 'react-native-vision-camera';
-import { Canvas, Image as SkiaImage, useImage, makeImageFromView, Skia } from '@shopify/react-native-skia';
+import { Canvas, Image as SkiaImage, useImage, } from '@shopify/react-native-skia';
 import Loader from '../../../components/Loader';
 import { guestServices } from '../../../services/guestsService';
 import { HEIGHT, hp, wp } from '../../../contants/StyleGuide';
@@ -35,6 +35,22 @@ const TakePictureScreen = () => {
     const [flashError, setFlashError] = useState<string | null>(null);
     const [cameraPermission, setCameraPermission] = useState<CameraPermissionStatus>('not-determined');
     const [isCameraReady, setIsCameraReady] = useState<boolean>(false);
+
+    // App state & Focus for camera lifecycle
+    const [appState, setAppState] = useState(AppState.currentState);
+    const isFocused = useIsFocused();
+
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            setAppState(nextAppState);
+        });
+
+        return () => {
+            subscription.remove();
+        };
+    }, []);
+
+    const isCameraActive = isFocused && appState === 'active' && !isPreviewMode;
 
     // Camera/Filters state
     const [selectedFilter, setSelectedFilter] = useState<string>('none');
@@ -71,10 +87,10 @@ const TakePictureScreen = () => {
     // The actual "ready" signal comes from onInitialized on the <Camera> component,
     // which fires as soon as the native camera session is configured — no artificial delay.
     useEffect(() => {
-        if (cameraPermission !== 'granted' || !device || isPreviewMode) {
+        if (cameraPermission !== 'granted' || !device || !isCameraActive) {
             setIsCameraReady(false);
         }
-    }, [cameraPermission, device, isPreviewMode]);
+    }, [cameraPermission, device, isCameraActive]);
 
     // Overlay loading on mount
     useEffect(() => {
@@ -336,12 +352,12 @@ const TakePictureScreen = () => {
                 )}
 
                 {/* Camera preview */}
-                {!isPreviewMode && cameraPermission === 'granted' && device ? (
+                {isCameraActive && cameraPermission === 'granted' && device ? (
                     <Camera
                         ref={cameraRef}
                         style={StyleSheet.absoluteFill}
                         device={device}
-                        isActive={!isPreviewMode}
+                        isActive={isCameraActive}
                         photo={true}
                         enableZoomGesture={true}
                         torch={flashOn ? "on" : "off"}

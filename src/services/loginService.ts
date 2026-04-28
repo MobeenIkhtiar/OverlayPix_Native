@@ -576,3 +576,20 @@ export const linkProviderToExistingAccount = async (credential: any) => {
         throw error;
     }
 };
+
+// Safely disconnect from external auth providers
+export const clearExternalAuthSessions = async () => {
+    try {
+        await GoogleSignin.signOut();
+        await GoogleSignin.revokeAccess();
+    } catch (googleError) {
+        console.warn('Google sign out error:', googleError);
+    }
+    
+    try {
+        LoginManager.logOut();
+    } catch (facebookError) {
+        console.warn('Facebook logout error:', facebookError);
+    }
+};
+

@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator, Share, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import FastImage from 'react-native-fast-image';
-import Clipboard from '@react-native-clipboard/clipboard';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Header from '../../../components/Header';
 import { guestServices } from '../../../services/guestsService';
 import { hp, wp } from '../../../contants/StyleGuide';
-import { downloadImages, showErrorToastWithSupport } from '../../../utils/HelperFunctions';
+import { downloadImages, shareImageFile, showErrorToastWithSupport } from '../../../utils/HelperFunctions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Share2, Download, Trash2 } from 'lucide-react-native';
@@ -45,8 +44,6 @@ const ViewImageScreen: React.FC = () => {
     // Track which image is currently selected for main display
     const [selectedImageIdx, setSelectedImageIdx] = useState<number>(0);
 
-    // For share feedback
-    const [copied, setCopied] = useState<boolean>(false);
     const [currentUid, setCurrentUid] = useState<string | null>(null);
 
     useEffect(() => {
@@ -140,28 +137,13 @@ const ViewImageScreen: React.FC = () => {
 
         if (!url) return;
 
-        console.log('click on share button =>>>>>>>>>')
+        console.log('click on share button >>>>>>>>>');
 
-        try {
-            const result = await Share.share({
-                message: eventTitle
-                    ? `Check out this photo from ${eventTitle}: ${url}`
-                    : `Check out this photo: ${url}`,
-                url: url,
-            });
+        const caption = eventTitle
+            ? `Check out this photo from ${eventTitle}!`
+            : 'Check out this photo!';
 
-            if (result.action === Share.sharedAction) {
-                console.log('Shared successfully');
-            }
-        } catch (error) {
-            try {
-                Clipboard.setString(url);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-            } catch (e) {
-                console.error('Error copying to clipboard:', e);
-            }
-        }
+        await shareImageFile(url, caption);
     };
 
     const handleDownload = () => {
@@ -310,9 +292,6 @@ const ViewImageScreen: React.FC = () => {
                                     </View>
                                 )}
                             </View>
-                            {copied && (
-                                <Text style={styles.copiedText}>Link copied!</Text>
-                            )}
                         </View>
 
                         {/* Gallery Thumbnails */}
