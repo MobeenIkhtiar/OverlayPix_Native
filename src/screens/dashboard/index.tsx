@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Platform } from 'react-native';
 import Header from '../../components/Header';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { endPoints } from '../../services/Endpoints';
 import { dashboardService } from '../../services/dashboardService';
 import { wp, hp } from '../../contants/StyleGuide';
@@ -10,7 +10,9 @@ import { Plus } from 'lucide-react-native';
 import StatsCard from '../../components/StatsCard';
 import EventCard from '../../components/EventCard';
 import JoinedEventCard from '../../components/JoinedEventCard';
+import PhotoLimitModal from '../../components/PhotoLimitModal';
 import { useCreateEvent } from '../../hooks/useCreateEvent';
+import { proxyOverlayImage, showErrorToastWithSupport } from '../../utils/HelperFunctions';
 
 // Type guard to check if an object is a Firestore Timestamp
 const isFirestoreTimestamp = (obj: unknown): obj is { _seconds: number; _nanoseconds: number } => {
@@ -27,6 +29,10 @@ type EventType = {
     guestsCount: number;
     storageExpired: boolean;
     overlayUrl?: string;
+    allowedPhotosPerGuest?: number | null;
+    totalPhotoPool?: number | null;
+    currentPhotoCount?: number;
+    photoCount?: number;
     // Add other fields as needed
 };
 
@@ -45,32 +51,35 @@ const DashboardScreen: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [activeTab, setActiveTab] = useState<'your' | 'joined'>('your');
+    const [showPhotoLimitModal, setShowPhotoLimitModal] = useState<boolean>(false);
 
     const navigation: any = useNavigation();
 
     const { loadEventForEdit, resetEventData } = useCreateEvent();
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                setLoading(true);
-                const endPoint = activeTab === 'your' ? endPoints.dashboard : 'guests/events';
-                const data: any = await dashboardService.getDashboardData(endPoint);
-                console.log("dashboard data =>>>>>>>>>>>>>", data)
-                if (activeTab === 'your') {
-                    setYourDashboardData(data);
-                } else {
-                    setJoinedDashboardData(data);
+    useFocusEffect(
+        React.useCallback(() => {
+            const fetchDashboardData = async () => {
+                try {
+                    setLoading(true);
+                    const endPoint = activeTab === 'your' ? endPoints.dashboard : 'guests/events';
+                    const data: any = await dashboardService.getDashboardData(endPoint);
+                    console.log("dashboard data =>>>>>>>>>>>>>", data)
+                    if (activeTab === 'your') {
+                        setYourDashboardData(data);
+                    } else {
+                        setJoinedDashboardData(data);
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch dashboard data:', error);
+                } finally {
+                    setLoading(false);
                 }
-            } catch (error) {
-                console.error('Failed to fetch dashboard data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
+            };
 
-        fetchDashboardData();
-    }, [activeTab]);
+            fetchDashboardData();
+        }, [activeTab])
+    );
 
     const handleCreateEvent = () => {
         // Reset the context to ensure clean form data
@@ -85,6 +94,40 @@ const DashboardScreen: React.FC = () => {
         } catch (error) {
             console.error('Failed to load event for editing:', error);
         }
+    };
+
+    const handleTakePicturePress = (event: any) => {
+        const allowedPhotos = event.allowedPhotosPerGuest ?? null;
+        const photoCount = event.photoCount ?? 0;
+        const totalPhotoPool = event.totalPhotoPool ?? 0;
+        const currentPhotoCount = event.currentPhotoCount ?? 0;
+        const overlayUrl = proxyOverlayImage(event.overlayUrl);
+        const status = event.eventStatus || event.status;
+        const isEventExpired = status === 'expired';
+
+        if (isEventExpired) {
+            showErrorToastWithSupport("Event has been expired");
+            return;
+        }
+
+        if (allowedPhotos === 0 || allowedPhotos === null) {
+            if (totalPhotoPool === currentPhotoCount && totalPhotoPool !== 0) {
+                setShowPhotoLimitModal(true);
+            } else {
+                navigation.navigate('takePicture', { eventId: event.eventId, overlayUrl, fromDashboard: true });
+            }
+            return;
+        }
+
+        if (typeof allowedPhotos === 'number' && allowedPhotos > 0) {
+            if ((photoCount >= allowedPhotos) || (totalPhotoPool === currentPhotoCount && totalPhotoPool !== 0)) {
+                setShowPhotoLimitModal(true);
+            } else {
+                navigation.navigate('takePicture', { eventId: event.eventId, overlayUrl, fromDashboard: true });
+            }
+            return;
+        }
+        setShowPhotoLimitModal(true);
     };
 
     // Memoized filtered events for live search
@@ -254,11 +297,7 @@ const DashboardScreen: React.FC = () => {
                                         }}
                                         onQRCode={() => { navigation.navigate(`inviteGuestEasily`, { eventId: event.eventId }) }}
                                         onTakePicture={() => {
-                                            navigation.navigate('takePicture', {
-                                                eventId: event.eventId,
-                                                overlayUrl: event.overlayUrl,
-                                                fromDashboard: true
-                                            })
+                                            handleTakePicturePress(event);
                                         }}
                                     />
                                 </View>
@@ -303,11 +342,7 @@ const DashboardScreen: React.FC = () => {
                                             navigation.navigate(`userGallery`, { eventId: event?.eventId, fromDashboard: true })
                                         }}
                                         onTakePicture={() => {
-                                            navigation.navigate('takePicture', {
-                                                eventId: event.eventId,
-                                                overlayUrl: event.overlayUrl,
-                                                fromDashboard: true
-                                            })
+                                            handleTakePicturePress(event);
                                         }}
                                     />
                                 </View>
@@ -325,6 +360,8 @@ const DashboardScreen: React.FC = () => {
                     )
                 )}
             </ScrollView>
+
+            <PhotoLimitModal open={showPhotoLimitModal} onClose={() => setShowPhotoLimitModal(false)} />
         </SafeAreaView>
     );
 };

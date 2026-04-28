@@ -50,7 +50,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     open url: URL,
     options: [UIApplication.OpenURLOptionsKey : Any] = [:]
   ) -> Bool {
-    return ApplicationDelegate.shared.application(app, open: url, options: options)
+    let handledByFacebook = ApplicationDelegate.shared.application(app, open: url, options: options)
+    let handledByReact = RCTLinkingManager.application(app, open: url, options: options)
+    return handledByFacebook || handledByReact
+  }
+
+  // ✅ Universal Links handler
+  func application(
+    _ application: UIApplication,
+    continue userActivity: NSUserActivity,
+    restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
+  ) -> Bool {
+    return RCTLinkingManager.application(application, continue: userActivity, restorationHandler: restorationHandler)
   }
 }
 

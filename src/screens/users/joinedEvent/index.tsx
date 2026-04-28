@@ -10,12 +10,14 @@ import {
     FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dashboardService } from '../../../services/dashboardService';
 import { endPoints } from '../../../services/Endpoints';
 import JoinedEventCard from '../../../components/JoinedEventCard';
 import Header from '../../../components/Header';
+import PhotoLimitModal from '../../../components/PhotoLimitModal';
+import { proxyOverlayImage, showErrorToastWithSupport } from '../../../utils/HelperFunctions';
 import { wp, hp } from '../../../contants/StyleGuide';
 
 // Minimal type for joined event, adjust as needed
@@ -44,33 +46,70 @@ const JoinedEvents: React.FC = () => {
     const [joinLoading, setJoinLoading] = useState<boolean>(false);
     const [joinError, setJoinError] = useState<string | null>(null);
     const navigation = useNavigation<any>();
+    const [showPhotoLimitModal, setShowPhotoLimitModal] = useState<boolean>(false);
 
-    // Fetch live joined events data on component mount
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                setLoading(true);
-                const activeTab = 'joined'; // This screen is specifically for joined events
-                const endPoint = (activeTab as string) === 'your' ? endPoints.dashboard : 'guests/events';
-                const data: any = await dashboardService.getDashboardData(endPoint);
+    const handleTakePicturePress = (event: any) => {
+        const allowedPhotos = event.allowedPhotosPerGuest ?? null;
+        const photoCount = event.photoCount ?? 0;
+        const totalPhotoPool = event.totalPhotoPool ?? 0;
+        const currentPhotoCount = event.currentPhotoCount ?? 0;
+        const overlayUrl = proxyOverlayImage(event.overlayUrl);
+        const status = event.eventStatus || event.status;
+        const isEventExpired = status === 'expired';
 
-                console.log('joined events data=>>>>>>>>', data);
+        if (isEventExpired) {
+            showErrorToastWithSupport("Event has been expired");
+            return;
+        }
 
-                if (data && Array.isArray(data.events)) {
-                    setEvents(data.events as JoinedEvent[]);
-                } else {
-                    setEvents([]);
-                }
-            } catch (error) {
-                console.error('Failed to fetch dashboard data:', error);
-                setEvents([]);
-            } finally {
-                setLoading(false);
+        if (allowedPhotos === 0 || allowedPhotos === null) {
+            if (totalPhotoPool === currentPhotoCount && totalPhotoPool !== 0) {
+                setShowPhotoLimitModal(true);
+            } else {
+                navigation.navigate('takePicture', { eventId: event.eventId, overlayUrl, fromDashboard: true });
             }
-        };
+            return;
+        }
 
-        fetchDashboardData();
-    }, []);
+        if (typeof allowedPhotos === 'number' && allowedPhotos > 0) {
+            if ((photoCount >= allowedPhotos) || (totalPhotoPool === currentPhotoCount && totalPhotoPool !== 0)) {
+                setShowPhotoLimitModal(true);
+            } else {
+                navigation.navigate('takePicture', { eventId: event.eventId, overlayUrl, fromDashboard: true });
+            }
+            return;
+        }
+        setShowPhotoLimitModal(true);
+    };
+
+    // Fetch live joined events data on component focus
+    useFocusEffect(
+        React.useCallback(() => {
+            const fetchDashboardData = async () => {
+                try {
+                    setLoading(true);
+                    const activeTab = 'joined'; // This screen is specifically for joined events
+                    const endPoint = (activeTab as string) === 'your' ? endPoints.dashboard : 'guests/events';
+                    const data: any = await dashboardService.getDashboardData(endPoint);
+
+                    console.log('joined events data=>>>>>>>>', data);
+
+                    if (data && Array.isArray(data.events)) {
+                        setEvents(data.events as JoinedEvent[]);
+                    } else {
+                        setEvents([]);
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch dashboard data:', error);
+                    setEvents([]);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            fetchDashboardData();
+        }, [])
+    );
 
     // Handler for joining event by share code
     const handleJoinEvent = async () => {
@@ -127,11 +166,7 @@ const JoinedEvents: React.FC = () => {
                 });
             }}
             onTakePicture={() => {
-                navigation.navigate('takePicture', {
-                    eventId: item.eventId,
-                    overlayUrl: item.overlayUrl,
-                    fromDashboard: true,
-                });
+                handleTakePicturePress(item);
             }}
         />
     );
@@ -247,6 +282,8 @@ const JoinedEvents: React.FC = () => {
                     </>
                 )}
             </ScrollView>
+
+            <PhotoLimitModal open={showPhotoLimitModal} onClose={() => setShowPhotoLimitModal(false)} />
         </SafeAreaView>
     );
 };

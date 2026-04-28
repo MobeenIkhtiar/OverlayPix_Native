@@ -41,7 +41,7 @@ export const EventSummaryCard: React.FC<EventSummaryCardProps> = ({
                 {photosPerGuest != null && (
                     <SummaryRow icon={<Camera color="#3DA9B7" size={wp(5)} />} label="Photos Per Guest" value={String(photosPerGuest)} />
                 )}
-                <SummaryRow icon={<Clock color="#3DA9B7" size={wp(5)} />} label="Photo Duration" value={photoDuration + 'days' || 'No duration'} />
+                <SummaryRow icon={<Clock color="#3DA9B7" size={wp(5)} />} label="Photo Duration" value={photoDuration + ' days' || 'No duration'} />
                 <View style={styles.linkSection}>
                     <View style={styles.linkRow}>
                         <View style={styles.linkLabelRow}>
